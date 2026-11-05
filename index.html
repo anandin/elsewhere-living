@@ -604,6 +604,16 @@ const errEl=document.getElementById('errbox');
 const tintEl=document.getElementById('tint');
 const DEBUG=new URLSearchParams(location.search).has('debug');
 const SNAP=new URLSearchParams(location.search).has('snap'); // ?snap: after ~60 frames, freeze one canvas capture into a static <img> so screenshot QA can see the valley (the live canvas never sits still for capture tools)
+/* Round-3 QA hooks, harmless in production (absent = shipped behaviour):
+   &camaz=&campol=&camrad=&camfov= pin the orbit camera for framing sweeps
+   and disable the idle drift; &snapframes=N lowers the ?snap threshold. */
+const CAMQ=(()=>{ const q=new URLSearchParams(location.search);
+  const num=(k,lo,hi)=>{ if(!q.has(k)) return null; const v=parseFloat(q.get(k)); return isFinite(v)?Math.min(hi,Math.max(lo,v)):null; };
+  const o={ az:num('camaz',-Math.PI*4,Math.PI*4), pol:num('campol',0.05,1.45), rad:num('camrad',1,12), fov:num('camfov',20,110) };
+  o.any=(o.az!==null||o.pol!==null||o.rad!==null||o.fov!==null);
+  return o;
+})();
+const SNAP_FRAMES=(()=>{ const v=parseInt(new URLSearchParams(location.search).get('snapframes')); return isFinite(v)?Math.min(600,Math.max(5,v)):60; })();
 window.__errors=[];
 function showError(msg){
   window.__errors.push(String(msg));
@@ -618,7 +628,7 @@ if(DEBUG){ const pre=document.createElement('pre'); pre.id='debugdump'; pre.styl
 const scene=new THREE.Scene();
 const BG_DAY=new THREE.Color(0x191008), BG_NIGHT=new THREE.Color(0x27335c);
 scene.background=new THREE.Color().copy(BG_DAY); // warm cabinet dark by day; moonlit indigo at night (loop lerps)
-const camera=new THREE.PerspectiveCamera(55,1,0.1,5000);
+const camera=new THREE.PerspectiveCamera(CAMQ.fov!==null?CAMQ.fov:68,1,0.1,5000); // round-3: default fov 55 -> 68 (dollhouse framing, measured)
 const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:SNAP}); // preserve only in ?snap mode — production behaviour unchanged
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 stageEl.insertBefore(renderer.domElement, stageEl.firstChild);
@@ -823,16 +833,21 @@ function glowSprite(inner='rgba(255,205,110,1)'){
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
   return sp;
 }
+/* Round-3: figures read small in the whole-bowl dollhouse frame, so bodies
+   (and their ground shadow/ring) scale up 1.35x. Feet stay planted: the
+   scale is applied to the inner group whose origin is the ground point.
+   Miniature is still the fantasy — the name labels carry identity. */
+const FIG_SCALE=1.35;
 function makeFigure(def){
   const H=FIG_H;
   const g={ group:new THREE.Group(), inner:new THREE.Group() };
   g.group.add(g.inner);
   // soft blob shadow on the ground
-  const sh=new THREE.Mesh(new THREE.CircleGeometry(0.42*H,20),
+  const sh=new THREE.Mesh(new THREE.CircleGeometry(0.42*H*FIG_SCALE,20),
     new THREE.MeshBasicMaterial({color:0x1a2410,transparent:true,opacity:0.28,depthWrite:false}));
   sh.rotation.x=-Math.PI/2; sh.position.y=0.02*H; g.group.add(sh);
   // meditation ring (hidden unless meditating)
-  const ring=new THREE.Mesh(new THREE.RingGeometry(0.52*H,0.74*H,32),
+  const ring=new THREE.Mesh(new THREE.RingGeometry(0.52*H*FIG_SCALE,0.74*H*FIG_SCALE,32),
     new THREE.MeshBasicMaterial({color:0xffcf7a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
   ring.rotation.x=-Math.PI/2; ring.position.y=0.03*H; g.group.add(ring); g.ring=ring;
   const P={ // Fairy Miniature palettes
@@ -916,7 +931,7 @@ function lerpAngle(a,b,t){ let d=(b-a)%(Math.PI*2); if(d>Math.PI)d-=Math.PI*2; i
 function poseActor(a,t,dt){
   const {fig,def}=a, H=FIG_H, inner=fig.inner, ph=fig.phase;
   const state=a.state;
-  inner.rotation.set(0,0,0); inner.position.y=0; inner.position.z=0; inner.scale.set(1,1,1);
+  inner.rotation.set(0,0,0); inner.position.y=0; inner.position.z=0; inner.scale.set(FIG_SCALE,FIG_SCALE,FIG_SCALE);
   fig.armL.rotation.x=0.08; fig.armR.rotation.x=0.08;
   fig.zzz.visible=false; fig.ring.material.opacity=0;
   const rec=(state==="sleep"||state==="meditate");
@@ -930,7 +945,7 @@ function poseActor(a,t,dt){
     fig.armR.rotation.x=(def.id==="wanderer"?-s*0.18:-s*0.55);
   } else if(state==="sleep"){
     inner.rotation.x=-0.92; inner.position.y=0.16*H; inner.position.z=-0.08*H;
-    inner.scale.y=1+0.02*Math.sin(t*1.2+ph);
+    inner.scale.y=FIG_SCALE*(1+0.02*Math.sin(t*1.2+ph));
     fig.zzz.visible=true; fig.zzz.position.y=(1.45+0.07*Math.sin(t*0.9+ph))*H;
   } else if(state==="meditate"){
     inner.position.y=-0.17*H;
@@ -1042,16 +1057,32 @@ function nightFactor(mins){
 }
 
 /* ---------- camera: a box window that breathes ---------- */
-/* Opening frame (round-2, second pass): the valley is a small ROOM — a
-   diorama island inside its pano sky shell (splat box ≈ x[-3.7,4.9],
-   y[-0.7,4.2], z[-4.0,2.3]). Two failure modes measured off the collider
-   heightfield + splat box: (1) shipped az 0.7 / pol 1.08 / rad ~5 parked
-   behind the south-east hill (crest 2.8 vs sightline 1.67) — a wall, not
-   a valley; (2) rad 7.6 from the west put the camera OUTSIDE the sky
-   shell, staring at the back of the backdrop (a pale ball). The window
-   must stay inside the room: az 5.1 (west, clear corridor), pol 0.95,
-   rad 5.2 — camera (-3.3, 3.2, 0.9), sightline clears every crest. */
-const cam={az:5.1, pol:0.95, rad:20, idle:99};
+/* Opening frame (round-3): the round-2 window (az 5.1 / pol 0.95 / rad ~5.6)
+   parked the camera INSIDE the backdrop gaussian band west of the island —
+   on a real phone GPU the frame was a smeared green wall (Anand's screenshot,
+   in-world 06:49). Measured facts (qa/round3 probes, collider heightfield +
+   splat centres): the world is a small diorama — splat box x[-3.7,4.9],
+   y[-0.7,4.2], z[-4.0,2.3]; there is NO distant sky dome to retreat into.
+   Bowl floor centre (0.6,-0.58,-0.7); rim crest runs 0.8 (south, low) to
+   3.5 (east shoulders). The camera must stay inside the box, over the
+   island's own airspace, high enough to see over the rim to the floor.
+   A first measured search (2,688 candidates scored on camera ground
+   clearance, sightline clearance, all-11-anchor visibility, frame fit)
+   crowned a southern window (az 0.27) — and the local ?snap renders then
+   REJECTED it: from the south the sightline crosses the shoulder hills'
+   gaussian skirts and the frame is streaked murk, while the EAST window
+   (az PI/2) looks straight down the river corridor and renders a readable
+   bowl — green slopes either side, river down the middle, figures standing
+   on the ground. The splat has a hero axis and it is the river's. FINAL:
+   az PI/2 / pol 0.56 / rad 5.0 / fov 68, target = bowl centre at floor
+   height — camera (3.26, 3.66, -0.70), 3.49 above the low east apron,
+   centre sightline unblocked (closest approach graze 0.38 near the floor
+   end of the ray), all 11 anchors visible, lower-frame foreground is
+   terrain 3.45 away (a slope, not a wall). Drift arc measured, not
+   assumed: every azimuth in ±0.24 at this pol passes the full test set,
+   and pol ±0.03 at both arc ends passes too — CAM_DRIFT is that 0.24. */
+const cam={az:CAMQ.az!==null?CAMQ.az:Math.PI/2, pol:CAMQ.pol!==null?CAMQ.pol:0.56, rad:20, idle:99, dv:1};
+const CAM_AZ0=cam.az, CAM_DRIFT=0.24; // verified-safe drift half-arc around the resting azimuth
 const pointers=new Map(); let pinchD=0;
 const cvs=renderer.domElement;
 cvs.addEventListener('pointerdown',e=>{ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); cvs.setPointerCapture(e.pointerId); cam.idle=0; });
@@ -1062,7 +1093,7 @@ cvs.addEventListener('pointermove',e=>{
   cam.idle=0;
   if(pointers.size===1){
     cam.az-=(e.clientX-prev.x)*0.005;
-    cam.pol=clamp(cam.pol-(e.clientY-prev.y)*0.004,0.55,1.30);
+    cam.pol=clamp(cam.pol-(e.clientY-prev.y)*0.004,0.35,1.30);
   } else if(pointers.size===2){
     const pts=[...pointers.values()];
     const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
@@ -1127,8 +1158,19 @@ function loop(){
   const dt=Math.min(0.05,(now-lastMs)/1000); lastMs=now;
   const t=now/1000;
   cam.idle+=dt;
-  if(cam.idle>8&&!(typeof S!=="undefined"&&S&&S.speed===0)) cam.az+=dt*0.006; // the window drifts, very slowly, when unwatched (never under a frozen QA clock)
-  const target=new THREE.Vector3(CENTRE.x,CENTRE.y+FIG_H*0.9,CENTRE.z);
+  if(cam.idle>8&&!CAMQ.any&&!(typeof S!=="undefined"&&S&&S.speed===0)){
+    // the window drifts, very slowly, when unwatched (never under a frozen
+    // QA clock) — a gentle swing INSIDE the verified-safe arc around the
+    // resting azimuth, so it can never wander into a hillside. If the
+    // visitor has dragged the window outside that arc, drift leaves their
+    // framing alone. A cam override pins the camera completely.
+    if(cam.az>=CAM_AZ0-CAM_DRIFT-0.001&&cam.az<=CAM_AZ0+CAM_DRIFT+0.001){
+      cam.az+=cam.dv*dt*0.006;
+      if(cam.az>CAM_AZ0+CAM_DRIFT){ cam.az=CAM_AZ0+CAM_DRIFT; cam.dv=-1; }
+      if(cam.az<CAM_AZ0-CAM_DRIFT){ cam.az=CAM_AZ0-CAM_DRIFT; cam.dv=1; }
+    }
+  }
+  const target=new THREE.Vector3(CENTRE.x,CENTRE.y,CENTRE.z); // bowl centre at floor height (round-3, as measured)
   camera.position.set(
     target.x+cam.rad*Math.sin(cam.pol)*Math.sin(cam.az),
     target.y+cam.rad*Math.cos(cam.pol),
@@ -1153,7 +1195,7 @@ function loop(){
     if(DEBUG) dumpDebug();
   }
   renderer.render(scene,camera);
-  if(SNAP&&!snapTaken){ window.__snapFrames=++snapFrames; if(snapFrames>=60) takeSnap(); }
+  if(SNAP&&!snapTaken){ window.__snapFrames=++snapFrames; if(snapFrames>=SNAP_FRAMES) takeSnap(); }
 }
 
 /* ---------- boot the stage ---------- */
@@ -1172,7 +1214,7 @@ window.__collider=()=>colliderObj;
     discoverAnchors();
     buildActors();
     buildFireflies();
-    cam.rad=clamp(WORLD_SPAN*0.65,FIG_H*6,WORLD_SPAN*0.78);
+    cam.rad=CAMQ.rad!==null?CAMQ.rad:5.0; // round-3 measured dollhouse distance (was WORLD_SPAN*0.65 ≈ 5.2-5.6, inside the backdrop band)
     layoutCamera();
     loadingEl.classList.add('done');
     renderer.setAnimationLoop(loop);
