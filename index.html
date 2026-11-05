@@ -896,6 +896,7 @@ function makeFigure(def){
   // name label
   const label=textSprite(def.name);
   label.scale.multiplyScalar(0.52*H); label.position.y=1.48*H; inner.add(label);
+  g.label=label; g.labelBase=label.position.clone(); // base spot for the de-collision pass below
   // receptive halo + sleep marker
   const halo=glowSprite(); halo.scale.set(1.7*H,1.7*H,1); halo.position.y=0.95*H; halo.visible=false; inner.add(halo); g.halo=halo;
   const zzz=textSprite('💤',{fs:52,bg:'rgba(30,20,10,0)'});
@@ -989,6 +990,78 @@ function updateActors(t,dt){
     a.fig.group.rotation.y=a.yaw;
     poseActor(a,t,dt);
   }
+}
+
+/* ---------- name-label de-collision (screen space) ----------
+   The name pills are sprites riding each figure's inner group, so when two
+   or three inhabitants gather (the meeting stone is the worst case) the
+   pills land on the same screen spot and pile over each other and over the
+   figures. Each frame: project every label's un-lifted anchor to stage
+   pixels, sort by screen height (ties keep the sim's stable SOUL_DEFS
+   order), and push any pill that overlaps an already-placed one straight
+   UP — never down onto a body — until the centres are a pill-height apart.
+   The stack is clamped inside the stage, the lift is smoothed so pills
+   settle instead of fighting, and it is applied along the camera's up
+   vector so a pill stays horizontally centred on its figure. Spacing
+   only: the pills themselves are untouched. */
+function declutterLabels(dt){
+  const W=stageEl.clientWidth||2, SH=stageEl.clientHeight||2;
+  const tanH=Math.tan(camera.fov*Math.PI/360);
+  const camUp=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+  scene.updateMatrixWorld(true);
+  const items=[];
+  for(let i=0;i<SOUL_DEFS.length;i++){
+    const a=actors[SOUL_DEFS[i].id];
+    if(!a||!a.fig.label||!a.fig.labelBase) continue;
+    const inner=a.fig.inner, label=a.fig.label;
+    const anchor=inner.localToWorld(a.fig.labelBase.clone()); // where the pill sits un-lifted
+    const dist=camera.position.distanceTo(anchor);
+    const proj=anchor.clone().project(camera);
+    const wpp=2*dist*tanH/SH; // world units per screen pixel at this depth
+    const ph=(label.scale.y*FIG_SCALE)/wpp; // pill height in px
+    items.push({a,inner,label,anchor,wpp,idx:i,
+      sx:(proj.x*0.5+0.5)*W, sy:(0.5-proj.y*0.5)*SH, y:0,
+      ph, pw:ph*(label.scale.x/label.scale.y),
+      behind:proj.z>1||proj.z<-1});
+  }
+  const order=items.filter(it=>!it.behind)
+    .sort((p,q)=>(Math.round(p.sy/10)-Math.round(q.sy/10))||(p.idx-q.idx));
+  const placed=[];
+  for(const it of order){
+    let y=it.sy, guard=0, moved=true;
+    while(moved&&guard++<8){
+      moved=false;
+      for(const p of placed){
+        const need=(it.ph+p.ph)*0.59; // centres ≥ ~1.18 pill heights apart
+        if(Math.abs(it.sx-p.sx)<(it.pw+p.pw)*0.46&&Math.abs(y-p.y)<need){
+          y=p.y-need; moved=true;
+        }
+      }
+    }
+    it.y=y; placed.push(it);
+  }
+  if(placed.length){ // keep the whole stack inside the stage
+    let top=Infinity, bot=-Infinity;
+    for(const it of placed){ top=Math.min(top,it.y-it.ph/2); bot=Math.max(bot,it.y+it.ph/2); }
+    let shift=0;
+    if(top<6) shift=6-top;
+    if(bot+shift>SH-6) shift-=(bot+shift)-(SH-6);
+    if(top+shift<6) shift=6-top; // both cannot fit — at least keep the tops readable
+    for(const it of placed) it.y+=shift;
+  }
+  const info=[];
+  for(const it of items){
+    const targetPx=it.behind?0:Math.max(0,it.sy-it.y); // upward lift, px
+    let cur=it.a.labelDyPx||0;
+    cur+=(targetPx-cur)*(1-Math.exp(-dt*12)); // settle, don't jitter
+    if(Math.abs(targetPx-cur)<0.05) cur=targetPx;
+    it.a.labelDyPx=cur;
+    const dest=it.anchor.clone().addScaledVector(camUp,cur*it.wpp);
+    it.label.position.copy(it.inner.worldToLocal(dest));
+    info.push({id:it.a.def.id,x:Math.round(it.sx),y:Math.round(it.y||it.sy),
+      w:Math.round(it.pw),h:Math.round(it.ph),liftPx:Math.round(cur)});
+  }
+  window.__labelInfo=info; // QA hook: final pill rects in stage px
 }
 
 /* ---------- fireflies ---------- */
@@ -1177,6 +1250,7 @@ function loop(){
     target.z+cam.rad*Math.sin(cam.pol)*Math.cos(cam.az));
   camera.lookAt(target);
   updateActors(t,dt);
+  declutterLabels(dt);
   tintTimer+=dt;
   if(tintTimer>0.5){
     tintTimer=0;
