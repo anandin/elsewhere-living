@@ -603,6 +603,7 @@ const loadingEl=document.getElementById('loading');
 const errEl=document.getElementById('errbox');
 const tintEl=document.getElementById('tint');
 const DEBUG=new URLSearchParams(location.search).has('debug');
+const SNAP=new URLSearchParams(location.search).has('snap'); // ?snap: after ~60 frames, freeze one canvas capture into a static <img> so screenshot QA can see the valley (the live canvas never sits still for capture tools)
 window.__errors=[];
 function showError(msg){
   window.__errors.push(String(msg));
@@ -618,7 +619,7 @@ const scene=new THREE.Scene();
 const BG_DAY=new THREE.Color(0x191008), BG_NIGHT=new THREE.Color(0x27335c);
 scene.background=new THREE.Color().copy(BG_DAY); // warm cabinet dark by day; moonlit indigo at night (loop lerps)
 const camera=new THREE.PerspectiveCamera(55,1,0.1,5000);
-const renderer=new THREE.WebGLRenderer({antialias:true});
+const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:SNAP}); // preserve only in ?snap mode — production behaviour unchanged
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 stageEl.insertBefore(renderer.domElement, stageEl.firstChild);
 scene.add(new SparkRenderer({renderer}));
@@ -1094,6 +1095,31 @@ document.querySelectorAll("#qualrow button").forEach(b=>b.addEventListener('clic
   loadingSplat=false;
 }));
 
+/* ---------- snap mode (?snap): one frozen frame for screenshot QA ----------
+   The boot sequence starts the animation loop only after loadSplat() has
+   resolved, and loadSplat awaits splat.initialized — so frames counted in
+   loop() are post-initialization frames. After ~60 of them, copy the canvas
+   into a static <img> laid over the stage (above the tint/vignette overlays),
+   flag it in the title, and stop the loop so the page holds perfectly still. */
+let snapFrames=0, snapTaken=false;
+function takeSnap(){
+  if(snapTaken) return; snapTaken=true;
+  try{
+    const img=document.createElement('img');
+    img.id='snapimg';
+    img.src=renderer.domElement.toDataURL('image/png');
+    img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:5;pointer-events:none;';
+    stageEl.appendChild(img);
+    const chip=document.createElement('div');
+    chip.id='snapchip'; chip.textContent='SNAP';
+    chip.style.cssText='position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:12;pointer-events:none;'+
+      'background:#ffb45e;color:#3a2410;font-family:inherit;font-size:11px;font-weight:bold;letter-spacing:.14em;padding:3px 10px;border-radius:10px;';
+    stageEl.appendChild(chip);
+    document.title+=' · SNAP READY';
+  }catch(e){ showError('snap failed: '+(e&&e.message||e)); }
+  renderer.setAnimationLoop(null); // freeze either way — a still page is the point
+}
+
 /* ---------- main loop ---------- */
 let lastMs=performance.now(), tintTimer=0;
 function loop(){
@@ -1127,6 +1153,7 @@ function loop(){
     if(DEBUG) dumpDebug();
   }
   renderer.render(scene,camera);
+  if(SNAP&&!snapTaken){ window.__snapFrames=++snapFrames; if(snapFrames>=60) takeSnap(); }
 }
 
 /* ---------- boot the stage ---------- */
