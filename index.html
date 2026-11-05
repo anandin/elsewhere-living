@@ -614,11 +614,12 @@ const CAMQ=(()=>{ const q=new URLSearchParams(location.search);
   return o;
 })();
 const SNAP_FRAMES=(()=>{ const v=parseInt(new URLSearchParams(location.search).get('snapframes')); return isFinite(v)?Math.min(600,Math.max(5,v)):60; })();
-/* World-orientation QA hook: Marble exports are USUALLY Y-down and need the
-   PI-about-X flip (world 508a380f, verified). A world exported Y-up would
-   render as its own underside under that flip — ?noflip renders splat and
-   collider unflipped so the two orientations can be compared per world. */
-const FLIP_WORLD=!new URLSearchParams(location.search).has('noflip');
+/* World-orientation: Marble's export frame VARIES BY WORLD. World 508a380f
+   shipped Y-down and needs the PI-about-X flip; Elveswhere (39fa629b)
+   shipped Y-up — under the flip it renders as its own underside (a floating
+   tan slab hiding the valley), verified by GPU A/B on 2026-11-05. Default
+   for THIS world is therefore unflipped; ?flip forces the old behaviour. */
+const FLIP_WORLD=new URLSearchParams(location.search).has('flip');
 window.__errors=[];
 function showError(msg){
   window.__errors.push(String(msg));
