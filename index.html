@@ -730,8 +730,19 @@ function discoverAnchors(){
   let cx=ctr.x, cz=ctr.z;
   if(pool.length){ cx=pool.reduce((s,h)=>s+h.x,0)/pool.length; cz=pool.reduce((s,h)=>s+h.z,0)/pool.length; }
   CENTRE.set(cx,medY,cz);
-  PATCH_R=R*0.55;
-  WORLD_SPAN=Math.max(size.x,size.z);
+  /* Scale comes from the LIVING CORE, not the collider box. Marble worlds
+     carry a wide backdrop shell (Elveswhere-Heart: box ~37u, village island
+     ~9u); box-derived scale put the camera ~4x too far out and grew the
+     figures into giants over pebble cottages. The pool that CENTRE was
+     averaged from is the honest ruler: take its p5-p95 spread per axis. */
+  let coreSpan=Math.max(size.x,size.z);
+  if(pool.length>=8){
+    const xs=pool.map(h=>h.x).sort((a,b)=>a-b), zs=pool.map(h=>h.z).sort((a,b)=>a-b);
+    const q=(arr,p)=>arr[Math.min(arr.length-1,Math.max(0,Math.floor(arr.length*p)))];
+    coreSpan=Math.max(q(xs,0.95)-q(xs,0.05), q(zs,0.95)-q(zs,0.05), 2);
+  }
+  PATCH_R=coreSpan*0.55;
+  WORLD_SPAN=coreSpan;
   FIG_H=clamp(WORLD_SPAN*0.10,0.5,6);
   // Life happens in the valley bowl: the collider's outer apron slopes have ground
   // the splat does not show, so anchors stay in the core around the centre where
@@ -803,7 +814,7 @@ function discoverAnchors(){
   groundStats={hits:hits.length, gentle:gentle.length, playable:playable.length, medY:+medY.toFixed(2),
     grpScale:+worldGroup.matrixWorld.elements[0].toFixed(3), grpY:+worldGroup.matrixWorld.elements[13].toFixed(2),
     boxSize:[+size.x.toFixed(1),+size.y.toFixed(1),+size.z.toFixed(1)],
-    centre:[+cx.toFixed(1),+cz.toFixed(1)], patchR:+PATCH_R.toFixed(1), figH:+FIG_H.toFixed(2)};
+    centre:[+cx.toFixed(1),+cz.toFixed(1)], patchR:+PATCH_R.toFixed(1), figH:+FIG_H.toFixed(2), coreSpan:+coreSpan.toFixed(1)};
 }
 function dumpDebug(){
   const d=document.getElementById('debugdump'); if(!d) return;
