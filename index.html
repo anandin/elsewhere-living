@@ -233,14 +233,19 @@ const CHATTER=[
 
 /* ---------------- state ---------------- */
 const SAVE_KEY="elsewhere-3d-v1";
+const QA_SEED=new URLSearchParams(location.search).has('tod'); // ?tod=HH:MM seeds a fresh, frozen-in-place world for demos/QA; never persisted
 let S=null;
 function freshState(){
   const now=new Date();
   let mins=now.getHours()*60+now.getMinutes();
-  const tod=new URLSearchParams(location.search).get('tod'); // ?tod=10:00 starts the clock at a chosen hour (demos/QA)
+  const q=new URLSearchParams(location.search);
+  const tod=q.get('tod'); // ?tod=10:00 starts the clock at a chosen hour (demos/QA)
   if(tod&&/^\d{1,2}:\d{2}$/.test(tod)){ const pp=tod.split(':').map(Number); mins=pp[0]*60+pp[1]; }
+  let speed=60;
+  const sp=q.get('speed'); // ?speed=0 freezes the world clock (QA captures); 1 = real time
+  if(sp!==null&&/^\d+$/.test(sp)) speed=Math.min(1440,parseInt(sp,10));
   return {
-    v:1, anchorReal:Date.now(), anchorWorld:mins, speed:60, day:1,
+    v:1, anchorReal:Date.now(), anchorWorld:mins, speed, day:1,
     weather:pick(["Golden","Sunny","Breezy"]),
     souls:{ gardener:{goal:4,mem:[],imp:[]}, tinkerer:{goal:2,mem:[],imp:[]}, wanderer:{goal:6,mem:[],imp:[]} },
     aff:{ "gardener-tinkerer":60, "gardener-wanderer":70, "tinkerer-wanderer":55 },
@@ -249,8 +254,9 @@ function freshState(){
     flags:{}
   };
 }
-function save(){ try{ S.anchorReal=Date.now(); S.anchorWorld=nowWorld(); localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
+function save(){ if(QA_SEED) return; try{ S.anchorReal=Date.now(); S.anchorWorld=nowWorld(); localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
 function load(){
+  if(QA_SEED){ S=freshState(); return false; }
   try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ S=JSON.parse(raw); if(S&&S.v===1) return true; } }catch(e){}
   S=freshState(); return false;
 }
@@ -609,14 +615,17 @@ addEventListener('unhandledrejection',e=>showError('promise: '+(e.reason&&e.reas
 if(DEBUG){ const pre=document.createElement('pre'); pre.id='debugdump'; pre.style.cssText='position:fixed;left:0;bottom:0;max-height:40%;overflow:auto;background:rgba(0,0,0,.8);color:#9f9;font-size:10px;z-index:99;margin:0;padding:6px;'; document.body.appendChild(pre); }
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x191008); // warm cabinet dark behind the diorama
+const BG_DAY=new THREE.Color(0x191008), BG_NIGHT=new THREE.Color(0x27335c);
+scene.background=new THREE.Color().copy(BG_DAY); // warm cabinet dark by day; moonlit indigo at night (loop lerps)
 const camera=new THREE.PerspectiveCamera(55,1,0.1,5000);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 stageEl.insertBefore(renderer.domElement, stageEl.firstChild);
 scene.add(new SparkRenderer({renderer}));
-scene.add(new THREE.HemisphereLight(0xfff2d8,0x46543a,1.5));
+const hemi=new THREE.HemisphereLight(0xfff2d8,0x46543a,1.5); scene.add(hemi);
+const SUN_DAY=new THREE.Color(0xffd9a0), SUN_NIGHT=new THREE.Color(0xaec4ff);
 const sun=new THREE.DirectionalLight(0xffd9a0,2.1); sun.position.set(30,45,15); scene.add(sun);
+const vigEl=document.getElementById('vig');
 
 const worldGroup=new THREE.Group(); scene.add(worldGroup);
 let splat=null, colliderObj=null, rayTop=600;
@@ -710,41 +719,70 @@ function discoverAnchors(){
   // Life happens in the valley bowl: the collider's outer apron slopes have ground
   // the splat does not show, so anchors stay in the core around the centre where
   // collider and visible terrain agree — figures must stand on ground you can SEE.
-  const corePool=playable.filter(h=>Math.hypot(h.x-cx,h.z-cz)<PATCH_R*0.62);
-  const snapSrc=corePool.length>=10?corePool:playable;
-  // snapping honours separation so the named places never collapse onto one point
-  const chosen=[{x:cx,z:cz}];
-  const snap=(dx,dz,minSep)=>{
+  // Round-1 lesson: a 0.62*PATCH_R core and ~1 body-width separation collapsed
+  // every named place into one patch (all three homes within ~1.2 units). The
+  // playable ground actually reaches much further — use it, and enforce real
+  // separation: homes are chosen FIRST, far apart, then work spots fill in.
+  const snapPool=playable.filter(h=>Math.hypot(h.x-cx,h.z-cz)<PATCH_R*0.98);
+  const snapSrc=snapPool.length>=10?snapPool:playable;
+  const chosen=[{x:cx,z:cz}]; // meet lives at centre and counts as an occupant
+  const snap=(dx,dz,minSep,pickLow)=>{
     const tx=cx+dx*PATCH_R, tz=cz+dz*PATCH_R;
-    const cand=snapSrc.slice().sort((a,b)=>((a.x-tx)**2+(a.z-tz)**2)-((b.x-tx)**2+(b.z-tz)**2));
-    let best=null;
-    for(const h of cand){
-      if(chosen.every(c=>Math.hypot(c.x-h.x,c.z-h.z)>=minSep)){ best=h; break; }
+    let cand=snapSrc.slice().sort((a,b)=>((a.x-tx)**2+(a.z-tz)**2)-((b.x-tx)**2+(b.z-tz)**2));
+    if(pickLow) cand=cand.slice(0,14).sort((a,b)=>a.y-b.y);
+    for(const relax of [1,0.85,0.7]){
+      for(const h of cand){
+        if(chosen.every(c=>Math.hypot(c.x-h.x,c.z-h.z)>=minSep*relax)){ chosen.push({x:h.x,z:h.z}); return new THREE.Vector3(h.x,h.y,h.z); }
+      }
     }
-    if(!best) best=cand[0];
-    if(best){ chosen.push({x:best.x,z:best.z}); return new THREE.Vector3(best.x,best.y,best.z); }
+    // last resort: of the nearest candidates take the one that maximises
+    // clearance from everything already chosen (never the blind nearest —
+    // that is how path2 once landed on top of the waterwheel)
+    let h=null, bestScore=-1;
+    for(const c of cand.slice(0,40)){
+      const md=Math.min(...chosen.map(o=>Math.hypot(o.x-c.x,o.z-c.z)));
+      if(md>bestScore){ bestScore=md; h=c; }
+    }
+    if(h){ chosen.push({x:h.x,z:h.z}); return new THREE.Vector3(h.x,h.y,h.z); }
     return new THREE.Vector3(tx,medY,tz);
   };
-  const sep=FIG_H*1.05;
+  const sepHome=FIG_H*2.1, sepSpot=FIG_H*1.7, sepPath=FIG_H*1.25;
+  const cottageA=snap(-0.82,-0.52, sepHome);
+  const cottageB=snap( 0.78, 0.66, sepHome);
+  const garden  =snap(-0.52, 0.78, sepSpot);
+  const wheel   =snap( 0.74,-0.34, sepSpot);
+  const river   =snap( 0.08,-0.90, sepSpot, true);
+  const bank    =snap(-0.86, 0.02, sepSpot, true);
+  const path1   =snap( 0.30, 0.30, sepPath);
+  const path2   =snap( 0.62, 0.86, sepPath);
+  const path3   =snap(-0.34,-0.88, sepPath);
+  // The lookout is chosen LAST, once every home and workplace is claimed:
+  // among the higher core ground, take the point FURTHEST from everything
+  // already chosen (round-2's first pass picked it early and it landed
+  // 0.9 units from the bank — two meditation spots sharing one patch).
+  // Note the bowl floor is fairly uniform (core heights cluster near medY);
+  // "highest" is a mild preference, spread is the hard requirement.
+  let rock=null, rScore=-1;
+  const hs=snapSrc.map(h=>h.y).sort((a,b)=>a-b);
+  const hGate=hs[Math.floor(hs.length*0.55)];
+  const rockCand=snapSrc.filter(h=>{ const d=Math.hypot(h.x-cx,h.z-cz); return d>=PATCH_R*0.34&&d<=PATCH_R*0.98; });
+  const mdOf=h=>Math.min(...chosen.map(c=>Math.hypot(c.x-h.x,c.z-h.z)));
+  // tiered: (1) higher ground with real clearance, (2) any ground with real
+  // clearance, (3) the clearest point there is. Clearance floor = 1.2 body
+  // heights — the first pass let the lookout sit 0.73 from the river.
+  for(const pool of [rockCand.filter(h=>h.y>=hGate&&mdOf(h)>=FIG_H*1.2),
+                     rockCand.filter(h=>mdOf(h)>=FIG_H*1.2),
+                     rockCand]){
+    rScore=-1; rock=null;
+    for(const h of pool){ const md=mdOf(h); if(md>rScore){ rScore=md; rock=h; } }
+    if(rock) break;
+  }
+  if(rock) chosen.push({x:rock.x,z:rock.z});
   ANCH={
     meet:    new THREE.Vector3(cx,medY,cz),
-    garden:  snap(-0.38, 0.10, sep),
-    wheel:   snap( 0.34, 0.30, sep),
-    river:   snap( 0.05, 0.44, sep),
-    bank:    snap(-0.15, 0.40, sep),
-    cottageA:snap(-0.28,-0.32, sep),
-    cottageB:snap( 0.36,-0.26, sep),
-    path1:   snap( 0.18, 0.12, FIG_H*0.8),
-    path2:   snap( 0.50, 0.18, FIG_H*0.8),
-    path3:   snap( 0.52,-0.28, FIG_H*0.8)
+    cottageA, cottageB, garden, wheel, river, bank, path1, path2, path3,
+    rock:    rock?new THREE.Vector3(rock.x,rock.y,rock.z):snap(0.55,-0.55, sepHome)
   };
-  // the lookout: highest core ground at a good remove from centre
-  let rock=null, rb=-1e18;
-  for(const h of snapSrc){
-    const d=Math.hypot(h.x-cx,h.z-cz);
-    if(d>PATCH_R*0.30&&d<PATCH_R*0.66&&h.y>rb){ rb=h.y; rock=h; }
-  }
-  ANCH.rock= rock?new THREE.Vector3(rock.x,rock.y,rock.z):snap(0.55,-0.50,sep);
   groundStats={hits:hits.length, gentle:gentle.length, playable:playable.length, medY:+medY.toFixed(2),
     grpScale:+worldGroup.matrixWorld.elements[0].toFixed(3), grpY:+worldGroup.matrixWorld.elements[13].toFixed(2),
     boxSize:[+size.x.toFixed(1),+size.y.toFixed(1),+size.z.toFixed(1)],
@@ -890,7 +928,7 @@ function poseActor(a,t,dt){
     fig.armL.rotation.x=s*0.55;
     fig.armR.rotation.x=(def.id==="wanderer"?-s*0.18:-s*0.55);
   } else if(state==="sleep"){
-    inner.rotation.x=-1.22; inner.position.y=0.10*H; inner.position.z=-0.10*H;
+    inner.rotation.x=-0.92; inner.position.y=0.16*H; inner.position.z=-0.08*H;
     inner.scale.y=1+0.02*Math.sin(t*1.2+ph);
     fig.zzz.visible=true; fig.zzz.position.y=(1.45+0.07*Math.sin(t*0.9+ph))*H;
   } else if(state==="meditate"){
@@ -976,9 +1014,13 @@ function updateFireflies(t,nf){
 }
 
 /* ---------- day / night: an honest tint over baked light ---------- */
+/* Night is moonlit blue-violet, never a blackout: the tint peaks at 0.30
+   alpha over a lightened indigo, the cabinet behind the splat turns deep
+   blue (see loop), and the figures' lights warm up. The dusk reference
+   (direction-E) is luminous — the valley must stay readable at 2 AM. */
 const TINT_STOPS=[
-  [0,[16,22,58,0.44]],[300,[16,22,58,0.44]],[375,[120,70,60,0.20]],[450,[255,190,90,0.05]],
-  [1000,[255,190,90,0.05]],[1080,[255,130,60,0.13]],[1155,[40,30,70,0.30]],[1215,[16,22,58,0.44]],[1440,[16,22,58,0.44]]];
+  [0,[58,66,120,0.30]],[300,[58,66,120,0.30]],[375,[120,70,60,0.18]],[450,[255,190,90,0.05]],
+  [1000,[255,190,90,0.05]],[1080,[255,130,60,0.12]],[1155,[74,56,100,0.20]],[1215,[58,66,120,0.30]],[1440,[58,66,120,0.30]]];
 function tintFor(mins){
   for(let i=0;i<TINT_STOPS.length-1;i++){
     const [t0,c0]=TINT_STOPS[i], [t1,c1]=TINT_STOPS[i+1];
@@ -999,7 +1041,16 @@ function nightFactor(mins){
 }
 
 /* ---------- camera: a box window that breathes ---------- */
-const cam={az:0.7, pol:1.08, rad:20, idle:99};
+/* Opening frame (round-2, second pass): the valley is a small ROOM — a
+   diorama island inside its pano sky shell (splat box ≈ x[-3.7,4.9],
+   y[-0.7,4.2], z[-4.0,2.3]). Two failure modes measured off the collider
+   heightfield + splat box: (1) shipped az 0.7 / pol 1.08 / rad ~5 parked
+   behind the south-east hill (crest 2.8 vs sightline 1.67) — a wall, not
+   a valley; (2) rad 7.6 from the west put the camera OUTSIDE the sky
+   shell, staring at the back of the backdrop (a pale ball). The window
+   must stay inside the room: az 5.1 (west, clear corridor), pol 0.95,
+   rad 5.2 — camera (-3.3, 3.2, 0.9), sightline clears every crest. */
+const cam={az:5.1, pol:0.95, rad:20, idle:99};
 const pointers=new Map(); let pinchD=0;
 const cvs=renderer.domElement;
 cvs.addEventListener('pointerdown',e=>{ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); cvs.setPointerCapture(e.pointerId); cam.idle=0; });
@@ -1010,18 +1061,18 @@ cvs.addEventListener('pointermove',e=>{
   cam.idle=0;
   if(pointers.size===1){
     cam.az-=(e.clientX-prev.x)*0.005;
-    cam.pol=clamp(cam.pol-(e.clientY-prev.y)*0.004,0.55,1.42);
+    cam.pol=clamp(cam.pol-(e.clientY-prev.y)*0.004,0.55,1.30);
   } else if(pointers.size===2){
     const pts=[...pointers.values()];
     const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
-    if(pinchD>0) cam.rad=clamp(cam.rad*(pinchD/d),FIG_H*4,WORLD_SPAN*2.6);
+    if(pinchD>0) cam.rad=clamp(cam.rad*(pinchD/d),FIG_H*5,WORLD_SPAN*0.78);
     pinchD=d;
   }
 });
 const endPointer=e=>{ pointers.delete(e.pointerId); if(pointers.size<2) pinchD=0; };
 cvs.addEventListener('pointerup',endPointer);
 cvs.addEventListener('pointercancel',endPointer);
-cvs.addEventListener('wheel',e=>{ e.preventDefault(); cam.rad=clamp(cam.rad*Math.exp(e.deltaY*0.001),FIG_H*4,WORLD_SPAN*2.6); cam.idle=0; },{passive:false});
+cvs.addEventListener('wheel',e=>{ e.preventDefault(); cam.rad=clamp(cam.rad*Math.exp(e.deltaY*0.001),FIG_H*5,WORLD_SPAN*0.78); cam.idle=0; },{passive:false});
 function layoutCamera(){
   const w=stageEl.clientWidth||2, h=stageEl.clientHeight||2;
   renderer.setSize(w,h);
@@ -1050,8 +1101,8 @@ function loop(){
   const dt=Math.min(0.05,(now-lastMs)/1000); lastMs=now;
   const t=now/1000;
   cam.idle+=dt;
-  if(cam.idle>8) cam.az+=dt*0.006; // the window drifts, very slowly, when unwatched
-  const target=new THREE.Vector3(CENTRE.x,CENTRE.y+FIG_H*0.8,CENTRE.z);
+  if(cam.idle>8&&!(typeof S!=="undefined"&&S&&S.speed===0)) cam.az+=dt*0.006; // the window drifts, very slowly, when unwatched (never under a frozen QA clock)
+  const target=new THREE.Vector3(CENTRE.x,CENTRE.y+FIG_H*0.9,CENTRE.z);
   camera.position.set(
     target.x+cam.rad*Math.sin(cam.pol)*Math.sin(cam.az),
     target.y+cam.rad*Math.cos(cam.pol),
@@ -1063,7 +1114,16 @@ function loop(){
     tintTimer=0;
     const mins=worldClock(nowWorld()).mins;
     tintEl.style.background=tintFor(mins);
-    updateFireflies(t,nightFactor(mins));
+    const nf=nightFactor(mins);
+    updateFireflies(t,nf);
+    // moonlight grade: cabinet turns indigo, the vignette breathes open,
+    // and the figures' lights trade warm sun for cool moonlight so bodies
+    // stay readable against the tinted splat (lights never touch the splat).
+    scene.background.lerpColors(BG_DAY,BG_NIGHT,nf);
+    vigEl.style.opacity=(1-nf*0.35).toFixed(3);
+    hemi.intensity=1.5+nf*0.55;
+    sun.intensity=2.1-nf*1.15;
+    sun.color.lerpColors(SUN_DAY,SUN_NIGHT,nf);
     if(DEBUG) dumpDebug();
   }
   renderer.render(scene,camera);
@@ -1085,7 +1145,7 @@ window.__collider=()=>colliderObj;
     discoverAnchors();
     buildActors();
     buildFireflies();
-    cam.rad=clamp(WORLD_SPAN*0.62,FIG_H*6,WORLD_SPAN*2.4);
+    cam.rad=clamp(WORLD_SPAN*0.65,FIG_H*6,WORLD_SPAN*0.78);
     layoutCamera();
     loadingEl.classList.add('done');
     renderer.setAnimationLoop(loop);
