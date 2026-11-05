@@ -609,11 +609,16 @@ const SNAP=new URLSearchParams(location.search).has('snap'); // ?snap: after ~60
    and disable the idle drift; &snapframes=N lowers the ?snap threshold. */
 const CAMQ=(()=>{ const q=new URLSearchParams(location.search);
   const num=(k,lo,hi)=>{ if(!q.has(k)) return null; const v=parseFloat(q.get(k)); return isFinite(v)?Math.min(hi,Math.max(lo,v)):null; };
-  const o={ az:num('camaz',-Math.PI*4,Math.PI*4), pol:num('campol',0.05,1.45), rad:num('camrad',1,12), fov:num('camfov',20,110) };
+  const o={ az:num('camaz',-Math.PI*4,Math.PI*4), pol:num('campol',0.05,1.45), rad:num('camrad',1,120), fov:num('camfov',20,110) };
   o.any=(o.az!==null||o.pol!==null||o.rad!==null||o.fov!==null);
   return o;
 })();
 const SNAP_FRAMES=(()=>{ const v=parseInt(new URLSearchParams(location.search).get('snapframes')); return isFinite(v)?Math.min(600,Math.max(5,v)):60; })();
+/* World-orientation QA hook: Marble exports are USUALLY Y-down and need the
+   PI-about-X flip (world 508a380f, verified). A world exported Y-up would
+   render as its own underside under that flip — ?noflip renders splat and
+   collider unflipped so the two orientations can be compared per world. */
+const FLIP_WORLD=!new URLSearchParams(location.search).has('noflip');
 window.__errors=[];
 function showError(msg){
   window.__errors.push(String(msg));
@@ -667,7 +672,7 @@ function applySemantics(sem){
 async function loadSplat(url){
   if(splat){ worldGroup.remove(splat); if(splat.dispose) splat.dispose(); }
   splat=new SplatMesh({url});
-  splat.quaternion.set(1,0,0,0); // SPZ is Y-down vs three.js Y-up (Spark docs pattern)
+  if(FLIP_WORLD) splat.quaternion.set(1,0,0,0); // SPZ is Y-down vs three.js Y-up (Spark docs pattern)
   worldGroup.add(splat);
   await splat.initialized;
 }
@@ -678,7 +683,7 @@ async function loadCollider(){
   // PI-about-X flip as the splat, or its heightfield is upside-down (its flat
   // "lid" up, the real valley floor hanging below). Verified against the
   // splat's own gaussian centres: flipped collider ground == visible surface.
-  colliderObj.quaternion.set(1,0,0,0);
+  if(FLIP_WORLD) colliderObj.quaternion.set(1,0,0,0);
   // DoubleSide: Marble colliders are not reliably wound for downward rays;
   // raycast respects material.side, and the floor must answer from above.
   colliderObj.traverse(o=>{ o.visible=false; if(o.isMesh&&o.material) o.material.side=THREE.DoubleSide; });
