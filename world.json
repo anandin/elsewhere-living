@@ -1,33 +1,34 @@
+HTTP 200
 {
- "world_id": "181080ab-c13a-4d44-92ca-63890a2b7578",
- "display_name": "Elveswhere-Heart",
+ "world_id": "778e9f65-f64a-47a3-b449-6238fceb8d77",
+ "display_name": "Elveswhere Scene World",
  "tags": null,
  "assets": {
   "mesh": {
-   "collider_mesh_url": "https://cdn.marble.worldlabs.ai/181080ab-c13a-4d44-92ca-63890a2b7578/fc28fc3d.glb",
+   "collider_mesh_url": "https://cdn.marble.worldlabs.ai/778e9f65-f64a-47a3-b449-6238fceb8d77/04650802.glb",
    "hq_mesh_url": null,
    "full_res_mesh_url": null
   },
   "imagery": {
-   "pano_url": "https://cdn.marble.worldlabs.ai/181080ab-c13a-4d44-92ca-63890a2b7578/94679647-7461-4177-879c-5a427859657a_panos/rgb_0.png"
+   "pano_url": "https://cdn.marble.worldlabs.ai/778e9f65-f64a-47a3-b449-6238fceb8d77/78f63816-bd56-478d-a430-a89e3a5c675b_panos/rgb_0.png"
   },
   "splats": {
    "spz_urls": {
-    "500k": "https://cdn.marble.worldlabs.ai/181080ab-c13a-4d44-92ca-63890a2b7578/06c8c2ed-fc1b-42b9-a369-ea09836ceb64_ceramic_500k.spz",
-    "100k": "https://cdn.marble.worldlabs.ai/181080ab-c13a-4d44-92ca-63890a2b7578/ce91bf43-2f9a-498c-b477-7b27c51961a7_dust_100k.spz",
-    "150k": "https://cdn.marble.worldlabs.ai/181080ab-c13a-4d44-92ca-63890a2b7578/84946730-f56f-4369-93be-8fcd9c971c34_ceramic_150k.spz",
-    "full_res": "https://cdn.marble.worldlabs.ai/181080ab-c13a-4d44-92ca-63890a2b7578/39728799-a9a3-4cdd-9e33-66fc882ed1d3_ceramic.spz"
+    "500k": "https://cdn.marble.worldlabs.ai/778e9f65-f64a-47a3-b449-6238fceb8d77/94100f10-79ad-41ec-899e-3cd0159b2906_ceramic_500k.spz",
+    "100k": "https://cdn.marble.worldlabs.ai/778e9f65-f64a-47a3-b449-6238fceb8d77/87559a06-a915-4abd-8c8e-31cfa294d830_dust_100k.spz",
+    "150k": "https://cdn.marble.worldlabs.ai/778e9f65-f64a-47a3-b449-6238fceb8d77/c0dba0a0-026a-42b2-86da-02abafb70745_ceramic_150k.spz",
+    "full_res": "https://cdn.marble.worldlabs.ai/778e9f65-f64a-47a3-b449-6238fceb8d77/8b9064e9-5b4e-4b22-b85c-e5feb8cb038d_ceramic.spz"
    },
    "semantics_metadata": {
-    "metric_scale_factor": 2.785120964050293,
-    "ground_plane_offset": 3.218921184539795
+    "metric_scale_factor": 3.817471504211426,
+    "ground_plane_offset": 3.271275520324707
    }
   },
-  "thumbnail_url": "https://cdn.marble.worldlabs.ai/181080ab-c13a-4d44-92ca-63890a2b7578/c09a8fbe-38df-4e66-b823-308049e7f5ed_sand_mpi/thumbnail.webp",
-  "caption": "The scene is a tabletop miniature diorama, crafted in a whimsical, fairy-tale model style, evoking a sense of enchanting wonder and delicate artistry. The overall tone is magical and serene, bathed in the soft glow of golden honey sunlight. At the very center of a verdant, round green valley stands a small, pristine white elven castle, distinguished by its tall, slender spires that reach gracefully upwards. Clustered intimately around the castle are numerous tiny, crooked storybook cottages, each emitting a warm, inviting glow from their miniature windows. A sparkling river, narrow and winding, meanders through the heart of the village, its gentle flow crossed by a small, elegantly arched stone bridge. At the edges of the valley, miniature waterfalls cascade delicately, adding a dynamic element to the tranquil landscape. The valley is dotted with puffball trees, their rounded canopies resembling soft clouds, and glowing mushrooms, which cast subtle, ethereal light. Mossy, rounded hills encircle the entire scene, forming a natural, protective boundary for the miniature kingdom. The castle is centrally positioned, with the cottages forming a concentric ring around its base. The river flows between the cottages and the castle, with the bridge providing passage across it. The waterfalls are situated at the outermost perimeter of the valley, where the land begins to rise into the surrounding hills. "
+  "thumbnail_url": "https://cdn.marble.worldlabs.ai/778e9f65-f64a-47a3-b449-6238fceb8d77/f276263a-1adb-4316-858d-3389ad97591f_sand_mpi/thumbnail.webp",
+  "caption": "The scene is a lush miniature fairy-tale kingdom diorama, captured with exceptional detail and vibrant, warm lighting, evoking a whimsical and enchanting tone. The diorama features a meticulously crafted landscape, with a sparkling river originating from the back, flowing through the middle, and terminating at the front of the scene, creating a natural divide. A small, arched stone bridge spans the river in the central portion, leading to a tiny village of crooked storybook cottages. These cottages, nestled among round puffball trees and glowing mushrooms, display warm light emanating from their windows, suggesting a cozy, inhabited space. Further back, on a verdant hill, stands a majestic white elven castle with tall, slender spires, overlooking the entire kingdom. The landscape is rich with diverse flora, including various flowers and patches of green moss, meticulously placed to enhance the miniature scale. The golden honey sunlight bathes the entire scene, highlighting textures and colors and casting soft, long shadows. The trees are positioned strategically around the village and along the riverbanks, providing a sense of depth and natural enclosure. The river\u2019s course features a small, picturesque waterfall, adding dynamic movement to the otherwise tranquil setting. The village houses are arranged in a charming cluster, with small, winding paths connecting them, all leading towards the stone bridge. The castle, positioned at the highest point, acts as a visual anchor, drawing the eye upwards. "
  },
- "created_at": "2026-11-05T19:29:10Z",
- "updated_at": "2026-11-05T19:34:45Z",
+ "created_at": "2026-11-05T20:14:26Z",
+ "updated_at": "2026-11-05T20:19:32Z",
  "permission": {
   "public": false,
   "allowed_readers": [],
@@ -35,9 +36,15 @@
   "allow_id_access": false
  },
  "world_prompt": {
-  "text_prompt": "The scene is a tabletop miniature diorama, crafted in a whimsical, fairy-tale model style, evoking a sense of enchanting wonder and delicate artistry. The overall tone is magical and serene, bathed in the soft glow of golden honey sunlight. At the very center of a verdant, round green valley stands a small, pristine white elven castle, distinguished by its tall, slender spires that reach gracefully upwards. Clustered intimately around the castle are numerous tiny, crooked storybook cottages, each emitting a warm, inviting glow from their miniature windows. A sparkling river, narrow and winding, meanders through the heart of the village, its gentle flow crossed by a small, elegantly arched stone bridge. At the edges of the valley, miniature waterfalls cascade delicately, adding a dynamic element to the tranquil landscape. The valley is dotted with puffball trees, their rounded canopies resembling soft clouds, and glowing mushrooms, which cast subtle, ethereal light. Mossy, rounded hills encircle the entire scene, forming a natural, protective boundary for the miniature kingdom. The castle is centrally positioned, with the cottages forming a concentric ring around its base. The river flows between the cottages and the castle, with the bridge providing passage across it. The waterfalls are situated at the outermost perimeter of the valley, where the land begins to rise into the surrounding hills. The 360 scene is faultless.",
-  "type": "text"
+  "text_prompt": "The scene is a lush miniature fairy-tale kingdom diorama, captured with exceptional detail and vibrant, warm lighting, evoking a whimsical and enchanting tone. The diorama features a meticulously crafted landscape, with a sparkling river originating from the back, flowing through the middle, and terminating at the front of the scene, creating a natural divide. A small, arched stone bridge spans the river in the central portion, leading to a tiny village of crooked storybook cottages. These cottages, nestled among round puffball trees and glowing mushrooms, display warm light emanating from their windows, suggesting a cozy, inhabited space. Further back, on a verdant hill, stands a majestic white elven castle with tall, slender spires, overlooking the entire kingdom. The landscape is rich with diverse flora, including various flowers and patches of green moss, meticulously placed to enhance the miniature scale. The golden honey sunlight bathes the entire scene, highlighting textures and colors and casting soft, long shadows. The trees are positioned strategically around the village and along the riverbanks, providing a sense of depth and natural enclosure. The river\u2019s course features a small, picturesque waterfall, adding dynamic movement to the otherwise tranquil setting. The village houses are arranged in a charming cluster, with small, winding paths connecting them, all leading towards the stone bridge. The castle, positioned at the highest point, acts as a visual anchor, drawing the eye upwards. The 360 scene is faultless.",
+  "type": "image",
+  "image_prompt": {
+   "uri": "https://cdn.marble.worldlabs.ai/api/media-assets/UBtj1phpJpZvSt6V1fzko7d8kCw1/38a65c9f-4632-4042-b12d-8addc7ed1288/elveswhere-scene-step1.png",
+   "data_base64": null,
+   "extension": "png"
+  },
+  "is_pano": false
  },
- "world_marble_url": "https://marble.worldlabs.ai/world/181080ab-c13a-4d44-92ca-63890a2b7578",
+ "world_marble_url": "https://marble.worldlabs.ai/world/778e9f65-f64a-47a3-b449-6238fceb8d77",
  "model": "marble-1.1"
 }

@@ -218,7 +218,31 @@ const SOUL_DEFS=[
   dreamLines:[
     "He dreamed of a path he has not walked yet, and a voice like weather moving through it. He woke facing the hills.",
     "In stillness the words settled on him like first snow — quiet, and impossible to ignore.",
-    "He dreamed the valley was speaking in its sleep. He listened the way he was taught: without grabbing."]}
+    "He dreamed the valley was speaking in its sleep. He listened the way he was taught: without grabbing."]},
+ {id:"herbalist", name:"The Herbalist", role:"knows every leaf by name", img:"portrait-herbalist.jpg",
+  traits:["gentle","knowing"], home:"cottageC", workSpot:"garden", medSpot:"bank",
+  goalName:"A physic garden of healing herbs", goalRate:2.2,
+  stages:[[0,"A bare patch of earth"],[12,"Beds dug and raked"],[26,"First herbs planted"],[42,"Mint escaping its bed"],[58,"Remedies drying"],[74,"Tinctures on the shelf"],[88,"Almost complete"],[100,"Every healing herb, growing"]],
+  dreamLines:[
+    "She dreamed the herbs spoke in green whispers, and one sentence stayed in her basket all morning.",
+    "In her dream a plant she has never seen was growing by the river. She woke knowing exactly where to look.",
+    "A dream of rain and roots. The words in it tasted of mint. She carried them gently into the day."]},
+ {id:"baker", name:"The Baker", role:"feeds the village at dawn", img:"portrait-baker.jpg",
+  traits:["warm","early-rising"], home:"cottageD", workSpot:"path1", medSpot:"river",
+  goalName:"A bread oven that never cools", goalRate:2.4,
+  stages:[[0,"Cold ashes, big plans"],[14,"Stones gathered"],[30,"Oven walls rising"],[46,"First firing"],[60,"First loaf — a brick"],[76,"Crust improving"],[90,"The village queues"],[100,"An oven that never cools"]],
+  dreamLines:[
+    "She dreamed the whole valley smelled of warm bread, and a kind sentence rose with the dough.",
+    "In her dream the oven fire never went out. She woke before dawn, as always, smiling at nothing.",
+    "A dream of flour and first light. Some of it she understood. The rest she kneaded in anyway."]},
+ {id:"fisher", name:"The Fisher", role:"reads the river like a letter", img:"portrait-fisher.jpg",
+  traits:["patient","quiet"], home:"cottageE", workSpot:"river", medSpot:"rock",
+  goalName:"To know every pool in the river", goalRate:2.0,
+  stages:[[0,"One pool, well known"],[15,"The shallows learned"],[30,"The bridge pool"],[48,"Where the big ones wait"],[64,"The waterfall pool"],[80,"Only the deep bend left"],[100,"Every pool in the river, known"]],
+  dreamLines:[
+    "She dreamed the river ran uphill, carrying one bright sentence against the current. She kept it.",
+    "In the dream a silver fish spoke, briefly and to the point. She woke early to think it over.",
+    "A dream of still water. The words in it sank slow as light. She will carry them all day, lightly."]}
 ];
 const byId=id=>SOUL_DEFS.find(s=>s.id===id);
 
@@ -229,7 +253,10 @@ const CHATTER=[
  ["wanderer","gardener","Beyond the far hill the mist sits all morning. It smells of apples.","Then bring me back a pocket of that air.","wanderer","I will bring you the story of it. That travels better."],
  ["gardener","wanderer","You walk too much and eat too little.","I eat stories. Very filling. Mostly."],
  ["tinkerer","wanderer","Hold this rope. If the wheel lifts me, catch.","And if it lifts us both?","tinkerer","Then we have invented something."],
- ["wanderer","tinkerer","The river showed me a stone shaped like a gear.","Everything the river makes is a gear, if you wait long enough."]];
+ ["wanderer","tinkerer","The river showed me a stone shaped like a gear.","Everything the river makes is a gear, if you wait long enough."],
+ ["herbalist","gardener","Your mint has escaped again. It is halfway to the river.","Mint has ambitions. I respect that, even as I dig it up."],
+ ["baker","fisher","Trade you a loaf for whatever the river gives you today.","The river gives patience first. Fish second. Bread improves both."],
+ ["fisher","wanderer","You walk the whole valley. I just sit in one place and let it come to me.","And yet you always know the news before I do.","fisher","The river delivers."]];
 
 /* ---------------- state ---------------- */
 const SAVE_KEY="elsewhere-3d-v1";
@@ -247,8 +274,8 @@ function freshState(){
   return {
     v:1, anchorReal:Date.now(), anchorWorld:mins, speed, day:1,
     weather:pick(["Golden","Sunny","Breezy"]),
-    souls:{ gardener:{goal:4,mem:[],imp:[]}, tinkerer:{goal:2,mem:[],imp:[]}, wanderer:{goal:6,mem:[],imp:[]} },
-    aff:{ "gardener-tinkerer":60, "gardener-wanderer":70, "tinkerer-wanderer":55 },
+    souls:Object.fromEntries(SOUL_DEFS.map(d=>[d.id,{goal:{gardener:4,tinkerer:2,wanderer:6,herbalist:3,baker:5,fisher:2}[d.id]||3,mem:[],imp:[]}])),
+    aff:Object.fromEntries(SOUL_DEFS.flatMap((a,i)=>SOUL_DEFS.slice(i+1).map((b,j)=>[a.id+"-"+b.id, 55+((i*7+(j+i+1)*11)%16)]))),
     journal:[], queue:[], lastSeenReal:Date.now(), lastRecapDay:0,
     metrics:{opens:0,whispers:0,delivered:0,recaps:0,godContacts:0},
     flags:{}
@@ -257,7 +284,12 @@ function freshState(){
 function save(){ if(QA_SEED) return; try{ S.anchorReal=Date.now(); S.anchorWorld=nowWorld(); localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
 function load(){
   if(QA_SEED){ S=freshState(); return false; }
-  try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ S=JSON.parse(raw); if(S&&S.v===1) return true; } }catch(e){}
+  try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ S=JSON.parse(raw); if(S&&S.v===1){
+    // newcomers move in: any soul missing from an older save arrives fresh
+    const SG={gardener:4,tinkerer:2,wanderer:6,herbalist:3,baker:5,fisher:2};
+    for(const d of SOUL_DEFS){ if(!S.souls[d.id]) S.souls[d.id]={goal:SG[d.id]||3,mem:[],imp:[]}; }
+    for(let i=0;i<SOUL_DEFS.length;i++) for(let j=i+1;j<SOUL_DEFS.length;j++){ const k=SOUL_DEFS[i].id+"-"+SOUL_DEFS[j].id; if(S.aff[k]===undefined) S.aff[k]=58; }
+    return true; } } }catch(e){}
   S=freshState(); return false;
 }
 function nowWorld(){
@@ -372,7 +404,10 @@ function simStep(wm,dt,live){
       ()=>{ journal(wm,"The Tinkerer found a stone by the river shaped exactly like a gear, and refuses to explain why he is smiling.","event",3); },
       ()=>{ journal(wm,"The Gardener planted a new row today, straight as a sentence.","event",3); },
       ()=>{ journal(wm,"The Wanderer named a star after the valley. The valley has not commented.","event",3); },
-      ()=>{ journal(wm,"Someone — accounts differ — left wildflowers at the meeting stone.","event",3); }
+      ()=>{ journal(wm,"Someone — accounts differ — left wildflowers at the meeting stone.","event",3); },
+      ()=>{ journal(wm,"The Baker's first loaf from the new oven was shared at the meeting stone. Verdict: promising.","event",3); S.aff["baker-fisher"]=Math.min(100,(S.aff["baker-fisher"]||58)+3); },
+      ()=>{ journal(wm,"The Herbalist cured the Tinkerer's headache with something green and unpronounceable. He has stopped asking what is in it.","event",3); S.aff["herbalist-tinkerer"]=Math.min(100,(S.aff["herbalist-tinkerer"]||58)+4); },
+      ()=>{ journal(wm,"The Fisher knew it would rain before the sky did. The valley is still deciding whether to be impressed.","event",3); }
     ]); ev();
   }
   if(S.queue.length){
@@ -786,6 +821,9 @@ function discoverAnchors(){
   const path1   =snap( 0.30, 0.30, sepPath);
   const path2   =snap( 0.62, 0.86, sepPath);
   const path3   =snap(-0.34,-0.88, sepPath);
+  const cottageC=snap( 0.02, 0.97, sepHome);
+  const cottageD=snap(-0.97,-0.80, sepHome);
+  const cottageE=snap( 0.97, 0.10, sepHome);
   // The lookout is chosen LAST, once every home and workplace is claimed:
   // among the higher core ground, take the point FURTHEST from everything
   // already chosen (round-2's first pass picked it early and it landed
@@ -810,7 +848,7 @@ function discoverAnchors(){
   if(rock) chosen.push({x:rock.x,z:rock.z});
   ANCH={
     meet:    new THREE.Vector3(cx,medY,cz),
-    cottageA, cottageB, garden, wheel, river, bank, path1, path2, path3,
+    cottageA, cottageB, cottageC, cottageD, cottageE, garden, wheel, river, bank, path1, path2, path3,
     rock:    rock?new THREE.Vector3(rock.x,rock.y,rock.z):snap(0.55,-0.55, sepHome)
   };
   groundStats={hits:hits.length, gentle:gentle.length, playable:playable.length, medY:+medY.toFixed(2),
@@ -872,7 +910,10 @@ function makeFigure(def){
   const P={ // Fairy Miniature palettes
     gardener:{body:0x6da34f, hair:0x7a4a26, skin:0xf2c49b},
     tinkerer:{body:0x8a5a34, hair:0x4a3220, skin:0xf2c49b},
-    wanderer:{body:0x5d6f8a, hair:0x5a4632, skin:0xf2c49b}
+    wanderer:{body:0x5d6f8a, hair:0x5a4632, skin:0xf2c49b},
+    herbalist:{body:0x7d9b57, hair:0xb5502e, skin:0xf2c49b},
+    baker:{body:0xc96f4a, hair:0xd9a441, skin:0xe8b088},
+    fisher:{body:0x4a7d8c, hair:0x2e2019, skin:0x8a5a3b}
   }[def.id];
   const inner=g.inner;
   const body=new THREE.Mesh(new THREE.SphereGeometry(0.34*H,24,18),mat(P.body));
@@ -912,6 +953,32 @@ function makeFigure(def){
     const staff=new THREE.Mesh(new THREE.CylinderGeometry(0.028*H,0.034*H,1.18*H,8),mat(0x7a5230));
     staff.position.set(0.40*H,0.52*H,0.05*H); staff.rotation.z=-0.06; inner.add(staff);
   }
+  // the girls: a dress skirt over the body, then each her own sign
+  if(def.id==="herbalist"||def.id==="baker"||def.id==="fisher"){
+    const skirt=new THREE.Mesh(new THREE.CylinderGeometry(0.20*H,0.44*H,0.52*H,20),mat(P.body));
+    skirt.position.y=0.26*H; inner.add(skirt);
+  }
+  if(def.id==="herbalist"){
+    for(let i=0;i<4;i++){ const b=new THREE.Mesh(new THREE.SphereGeometry(0.075*H,10,8),mat(P.hair));
+      b.position.set(0.16*H,(0.86-i*0.17)*H,-0.20*H); inner.add(b); } // the braid, down her back
+    const basket=new THREE.Mesh(new THREE.CylinderGeometry(0.13*H,0.10*H,0.13*H,12),mat(0xa67c44));
+    basket.position.set(-0.38*H,0.30*H,0.06*H); inner.add(basket);
+    const sprig=new THREE.Mesh(new THREE.SphereGeometry(0.09*H,10,8),mat(0x86c06a));
+    sprig.position.set(-0.38*H,0.40*H,0.06*H); inner.add(sprig);
+  } else if(def.id==="baker"){
+    const bun=new THREE.Mesh(new THREE.SphereGeometry(0.13*H,12,10),mat(P.hair));
+    bun.position.set(0,1.06*H,-0.10*H); inner.add(bun);
+    const apron=new THREE.Mesh(new THREE.CylinderGeometry(0.345*H,0.36*H,0.42*H,16,1,false,-0.7,1.4),mat(0xf3e6cf));
+    apron.position.y=0.40*H; inner.add(apron);
+    const loaf=new THREE.Mesh(new THREE.SphereGeometry(0.11*H,10,8),mat(0xd9a45c));
+    loaf.scale.set(1.4,0.75,0.9); loaf.position.set(-0.38*H,0.34*H,0.08*H); inner.add(loaf);
+  } else if(def.id==="fisher"){
+    for(const [cx2,cy2] of [[-0.20,0.98],[0.20,0.98],[-0.27,0.86],[0.27,0.86]]){
+      const curl=new THREE.Mesh(new THREE.SphereGeometry(0.10*H,10,8),mat(P.hair));
+      curl.position.set(cx2*H,cy2*H,-0.08*H); inner.add(curl); } // dark curls
+    const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.016*H,0.022*H,1.30*H,8),mat(0x6e4525));
+    rod.position.set(0.42*H,0.72*H,0.10*H); rod.rotation.z=-0.5; inner.add(rod);
+  }
   // name label
   const label=textSprite(def.name);
   label.scale.multiplyScalar(0.40*H); label.position.y=1.48*H; inner.add(label);
@@ -927,7 +994,7 @@ function makeFigure(def){
 
 /* ---------- actors: bodies driven by the sim ---------- */
 const actors={};
-const MEET_RING=[0.3,2.4,4.4];
+const MEET_RING=[0.3,1.35,2.4,3.45,4.4,5.45];
 function soulTarget(def){
   const c=worldClock(nowWorld());
   const p=plan[def.id]||scheduleFor(def.id,c.mins,S.weather);
