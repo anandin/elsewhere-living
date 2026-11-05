@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Elsewhere — a world that carries on</title>
+<title>Elveswhere — a world that carries on</title>
 <link rel="icon" href="data:,">
 <style>
   :root{
@@ -173,7 +173,7 @@
     </div>
 
     <div class="tabpage" id="tab-about">
-      <p style="font-size:14.5px;line-height:1.6;margin-top:2px;"><b>Elsewhere — living world v1.</b> A world that carries on. Three inhabitants live in this valley whether or not anyone is watching: they work, rest, visit each other, dream, and pursue goals of their own across days. This time the valley is a real place — you are looking into it, not at a picture of it.</p>
+      <p style="font-size:14.5px;line-height:1.6;margin-top:2px;"><b>Elveswhere — living world v1.</b> A world that carries on. Three inhabitants live in this valley whether or not anyone is watching: they work, rest, visit each other, dream, and pursue goals of their own across days. This time the valley is a real place — you are looking into it, not at a picture of it.</p>
       <p style="font-size:14.5px;line-height:1.6;">You are not a character here. You are the presence they sense but never see — and you can only reach them when they are ready to receive: asleep, or in meditation. A golden halo around a figure in the valley means someone is receptive right now.</p>
       <p class="smallnote">Fairy Miniature art direction, locked Nov 4, 2026. They still carry their roles as names — naming day is coming. Progress is saved on this device; the valley keeps its own time while you are gone, and catches up when you return. The valley's light is baked golden; the day-night cycle is a tint over the scene, honestly labelled.</p>
     </div>
@@ -895,7 +895,7 @@ function makeFigure(def){
   }
   // name label
   const label=textSprite(def.name);
-  label.scale.multiplyScalar(0.52*H); label.position.y=1.48*H; inner.add(label);
+  label.scale.multiplyScalar(0.40*H); label.position.y=1.48*H; inner.add(label);
   g.label=label; g.labelBase=label.position.clone(); // base spot for the de-collision pass below
   // receptive halo + sleep marker
   const halo=glowSprite(); halo.scale.set(1.7*H,1.7*H,1); halo.position.y=0.95*H; halo.visible=false; inner.add(halo); g.halo=halo;
@@ -1154,7 +1154,7 @@ function nightFactor(mins){
    terrain 3.45 away (a slope, not a wall). Drift arc measured, not
    assumed: every azimuth in ±0.24 at this pol passes the full test set,
    and pol ±0.03 at both arc ends passes too — CAM_DRIFT is that 0.24. */
-const cam={az:CAMQ.az!==null?CAMQ.az:Math.PI/2, pol:CAMQ.pol!==null?CAMQ.pol:0.56, rad:20, idle:99, dv:1};
+const cam={az:CAMQ.az!==null?CAMQ.az:Math.PI/2, pol:CAMQ.pol!==null?CAMQ.pol:0.80, rad:20, idle:99, dv:1};
 const CAM_AZ0=cam.az, CAM_DRIFT=0.24; // verified-safe drift half-arc around the resting azimuth
 const pointers=new Map(); let pinchD=0;
 const cvs=renderer.domElement;
@@ -1170,14 +1170,14 @@ cvs.addEventListener('pointermove',e=>{
   } else if(pointers.size===2){
     const pts=[...pointers.values()];
     const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
-    if(pinchD>0) cam.rad=clamp(cam.rad*(pinchD/d),FIG_H*5,WORLD_SPAN*0.78);
+    if(pinchD>0) cam.rad=clamp(cam.rad*(pinchD/d),FIG_H*5,WORLD_SPAN*1.7);
     pinchD=d;
   }
 });
 const endPointer=e=>{ pointers.delete(e.pointerId); if(pointers.size<2) pinchD=0; };
 cvs.addEventListener('pointerup',endPointer);
 cvs.addEventListener('pointercancel',endPointer);
-cvs.addEventListener('wheel',e=>{ e.preventDefault(); cam.rad=clamp(cam.rad*Math.exp(e.deltaY*0.001),FIG_H*5,WORLD_SPAN*0.78); cam.idle=0; },{passive:false});
+cvs.addEventListener('wheel',e=>{ e.preventDefault(); cam.rad=clamp(cam.rad*Math.exp(e.deltaY*0.001),FIG_H*5,WORLD_SPAN*1.7); cam.idle=0; },{passive:false});
 function layoutCamera(){
   const w=stageEl.clientWidth||2, h=stageEl.clientHeight||2;
   renderer.setSize(w,h);
@@ -1288,7 +1288,7 @@ window.__collider=()=>colliderObj;
     discoverAnchors();
     buildActors();
     buildFireflies();
-    cam.rad=CAMQ.rad!==null?CAMQ.rad:5.0; // round-3 measured dollhouse distance (was WORLD_SPAN*0.65 ≈ 5.2-5.6, inside the backdrop band)
+    cam.rad=CAMQ.rad!==null?CAMQ.rad:WORLD_SPAN*1.12; // Elveswhere eagle view: the whole settlement in one frame, sized to whatever world is loaded
     layoutCamera();
     loadingEl.classList.add('done');
     renderer.setAnimationLoop(loop);

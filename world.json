@@ -1,40 +1,43 @@
 {
- "world_id": "508a380f-92c6-45f9-b630-30e475051557",
- "display_name": "",
+ "world_id": "39fa629b-1724-4e55-9f19-717f946dc643",
+ "display_name": "Elveswhere",
  "tags": null,
  "assets": {
   "mesh": {
-   "collider_mesh_url": "https://cdn.marble.worldlabs.ai/508a380f-92c6-45f9-b630-30e475051557/7909cbc6.glb",
+   "collider_mesh_url": "https://cdn.marble.worldlabs.ai/39fa629b-1724-4e55-9f19-717f946dc643/0d9bc881.glb",
    "hq_mesh_url": null,
    "full_res_mesh_url": null
   },
   "imagery": {
-   "pano_url": "https://cdn.marble.worldlabs.ai/508a380f-92c6-45f9-b630-30e475051557/ae058584-f905-411c-9bfa-9b2882f82df5_panos/rgb_0.png"
+   "pano_url": "https://cdn.marble.worldlabs.ai/39fa629b-1724-4e55-9f19-717f946dc643/ab12166d-6711-4484-b469-df111ecdf30e_panos/rgb_0.png"
   },
   "splats": {
    "spz_urls": {
-    "500k": "https://cdn.marble.worldlabs.ai/508a380f-92c6-45f9-b630-30e475051557/7f55d01f-316a-46ec-aea5-ac1f368f47eb_ceramic_500k.spz",
-    "100k": "https://cdn.marble.worldlabs.ai/508a380f-92c6-45f9-b630-30e475051557/beadf404-3dfe-4e17-86af-7768ca4077ab_dust_100k.spz",
-    "150k": "https://cdn.marble.worldlabs.ai/508a380f-92c6-45f9-b630-30e475051557/0a131067-74eb-4a7a-807f-64574e05eff2_ceramic_150k.spz",
-    "full_res": "https://cdn.marble.worldlabs.ai/508a380f-92c6-45f9-b630-30e475051557/48757f3e-3e38-418a-881c-b15ae4677ef1_ceramic.spz"
+    "500k": "https://cdn.marble.worldlabs.ai/39fa629b-1724-4e55-9f19-717f946dc643/74d491fe-cc6a-4e32-bfcf-2324e5bf9d4d_ceramic_500k.spz",
+    "100k": "https://cdn.marble.worldlabs.ai/39fa629b-1724-4e55-9f19-717f946dc643/03e906bb-a053-451f-9080-a93ab1396127_dust_100k.spz",
+    "150k": "https://cdn.marble.worldlabs.ai/39fa629b-1724-4e55-9f19-717f946dc643/66acbaa0-63be-4b38-8845-3926ac1524a6_ceramic_150k.spz",
+    "full_res": "https://cdn.marble.worldlabs.ai/39fa629b-1724-4e55-9f19-717f946dc643/7befb39e-595d-47e0-9bc0-740d46547009_ceramic.spz"
    },
    "semantics_metadata": {
-    "metric_scale_factor": 4.1147594,
-    "ground_plane_offset": 2.6703305
+    "metric_scale_factor": 3.114069700241089,
+    "ground_plane_offset": 3.2026686668395996
    }
   },
-  "thumbnail_url": "https://cdn.marble.worldlabs.ai/508a380f-92c6-45f9-b630-30e475051557/7e462571-cc09-44db-a389-6beadac902ec_sand_mpi/thumbnail.webp",
-  "caption": "The scene is a miniature fairy-tale valley diorama, rendered in a highly detailed and enchanting style, evoking the cozy and tender atmosphere of a living storybook world. The overall tone is magical and serene, bathed in the soft, warm glow of golden hour. Lush, rounded mossy green hills dominate the landscape, their gentle slopes creating a sense of undulating terrain. A sparkling, winding river meanders through the valley, its clear waters reflecting the ambient light. A small, intricately crafted stone bridge arches gracefully over the river, connecting different sections of the miniature world. Beside the river, a wooden waterwheel steadily turns, its paddles catching the flowing water. Two crooked storybook cottages, each with warm glowing windows that hint at interior coziness and dark slate roofs, are nestled among the hills. Round, puffball trees with dense, spherical canopies are scattered throughout the valley, adding to the whimsical aesthetic. A neat flower garden, meticulously arranged with rows of tiny vegetables, thrives near one of the cottages. Winding cobblestone paths invite exploration, leading the eye through the miniature landscape. Tiny glowing mushrooms emit a soft luminescence, dotting the mossy ground and adding to the magical ambiance. Soft volumetric sunlight filters through the scene, creating gentle rays and illuminating drifting sparkles that dance in the air. The 360 scene is faultless."
+  "thumbnail_url": "https://cdn.marble.worldlabs.ai/39fa629b-1724-4e55-9f19-717f946dc643/c7f5e3d1-8eca-4f27-a3fa-6a4acf5122b4_sand_mpi/thumbnail.webp",
+  "caption": "The scene is a miniature storybook elven kingdom, presented in a charming, magical fairy-tale style with a soft, warm atmosphere. The entire landscape appears as a meticulously crafted living diorama, imbued with a gentle, golden honey sunlight that bathes the valley. An elegant elven castle, characterized by its tall white spires and graceful arched bridges, stands majestically on mossy cliffs at one end of the lush green valley. Waterfalls cascade from these cliffs, feeding into a sparkling, winding river that meanders through the valley floor. Along the riverbanks, numerous crooked storybook cottages are scattered, each emitting a warm, inviting glow from their windows. The landscape is dotted with distinctive puffball trees and clusters of glowing mushrooms, adding to the whimsical nature of the kingdom. Gently rounded, mossy hills define the contours of the valley, creating a serene and picturesque setting. The castle's spires reach towards the sky, while its bridges connect various parts of the cliffside stronghold. The river flows from the base of the waterfalls, past the cottages, and through the heart of the valley. The cottages are nestled amongst the puffball trees and glowing mushrooms, creating a sense of organic integration with nature. "
  },
- "created_at": null,
- "updated_at": null,
+ "created_at": "2026-11-05T18:55:52Z",
+ "updated_at": "2026-11-05T19:02:09Z",
  "permission": {
   "public": false,
   "allowed_readers": [],
   "allowed_writers": [],
   "allow_id_access": false
  },
- "world_prompt": null,
- "world_marble_url": "https://marble.worldlabs.ai/world/508a380f-92c6-45f9-b630-30e475051557",
- "model": null
+ "world_prompt": {
+  "text_prompt": "The scene is a miniature storybook elven kingdom, presented in a charming, magical fairy-tale style with a soft, warm atmosphere. The entire landscape appears as a meticulously crafted living diorama, imbued with a gentle, golden honey sunlight that bathes the valley. An elegant elven castle, characterized by its tall white spires and graceful arched bridges, stands majestically on mossy cliffs at one end of the lush green valley. Waterfalls cascade from these cliffs, feeding into a sparkling, winding river that meanders through the valley floor. Along the riverbanks, numerous crooked storybook cottages are scattered, each emitting a warm, inviting glow from their windows. The landscape is dotted with distinctive puffball trees and clusters of glowing mushrooms, adding to the whimsical nature of the kingdom. Gently rounded, mossy hills define the contours of the valley, creating a serene and picturesque setting. The castle's spires reach towards the sky, while its bridges connect various parts of the cliffside stronghold. The river flows from the base of the waterfalls, past the cottages, and through the heart of the valley. The cottages are nestled amongst the puffball trees and glowing mushrooms, creating a sense of organic integration with nature. The 360 scene is faultless.",
+  "type": "text"
+ },
+ "world_marble_url": "https://marble.worldlabs.ai/world/39fa629b-1724-4e55-9f19-717f946dc643",
+ "model": "marble-1.1"
 }
