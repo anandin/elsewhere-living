@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Elsewhere — a world that carries on</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --ink:#2b2118; --paper:#f7ecd7; --amber:#ffb45e; --gold:#e9b85f;
+    --deep:#1c2440; --moss:#5c7a4a; --panel:#fffaf0;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:#14100c;font-family:Georgia,'Times New Roman',serif;color:var(--ink);}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:1100px;margin:0 auto;background:#1a140e;}
+
+  /* ---------- the box / stage ---------- */
+  #box{position:relative;flex:0 0 56dvh;margin:10px 10px 0;border-radius:14px;padding:10px;
+    background:linear-gradient(145deg,#6b4a2c,#54371f 40%,#6f4e30 70%,#4a2f1a);
+    box-shadow:0 10px 30px rgba(0,0,0,.55), inset 0 2px 3px rgba(255,220,170,.35), inset 0 -3px 6px rgba(0,0,0,.5);}
+  #stage{position:relative;width:100%;height:100%;overflow:hidden;border-radius:6px;background:#0e1526;
+    box-shadow:inset 0 0 60px rgba(0,0,0,.55);cursor:grab;touch-action:none;}
+  #stage:active{cursor:grabbing;}
+  #stage canvas{display:block;}
+  #tint{position:absolute;inset:0;pointer-events:none;z-index:3;}
+  #vig{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 90px rgba(0,0,0,.5);border-radius:6px;z-index:4;}
+
+  #hud{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;z-index:9;pointer-events:none;}
+  #clock{background:rgba(20,14,8,.55);color:#ffedcb;border-radius:11px;padding:6px 11px;font-size:13px;letter-spacing:.03em;}
+  #clock b{font-size:15px;}
+  #weather{background:rgba(20,14,8,.55);color:#ffedcb;border-radius:11px;padding:6px 11px;font-size:13px;}
+  #speedrow{position:absolute;bottom:10px;right:12px;z-index:9;display:flex;gap:5px;}
+  #speedrow button{pointer-events:auto;border:1px solid rgba(255,230,180,.4);background:rgba(20,14,8,.6);color:#ffe9c4;
+    font-family:inherit;font-size:11px;border-radius:14px;padding:4px 9px;cursor:pointer;}
+  #speedrow button.sel{background:var(--amber);color:#3a2410;border-color:var(--amber);font-weight:bold;}
+  #qualrow{position:absolute;bottom:10px;left:12px;z-index:9;display:flex;gap:5px;align-items:center;}
+  #qualrow button{pointer-events:auto;border:1px solid rgba(255,230,180,.4);background:rgba(20,14,8,.6);color:#ffe9c4;
+    font-family:inherit;font-size:11px;border-radius:14px;padding:4px 9px;cursor:pointer;}
+  #qualrow button.sel{background:var(--amber);color:#3a2410;border-color:var(--amber);font-weight:bold;}
+  @media (max-width:620px){
+    #speedrow{bottom:44px;}
+    #hint{display:none;}
+  }
+  #hint{position:absolute;bottom:36px;left:12px;z-index:8;color:rgba(255,240,210,.75);font-size:11px;font-style:italic;pointer-events:none;}
+  #caption{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);z-index:8;max-width:82%;
+    background:rgba(255,250,238,.96);color:#43331f;font-size:13px;line-height:1.35;padding:8px 13px;border-radius:13px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:0;transition:opacity .4s;pointer-events:none;text-align:center;}
+  #caption.on{opacity:1;}
+  #loading{position:absolute;inset:0;z-index:15;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#1c2440,#141a30);color:#ffedcb;font-size:16px;text-align:center;padding:20px;}
+  #loading small{font-size:12.5px;color:#b9a67e;font-style:italic;}
+  #loading.done{display:none;}
+  #errbox{position:absolute;left:10px;bottom:64px;z-index:14;max-width:70%;color:#ffb59d;font-size:11px;
+    background:rgba(60,10,0,.55);border-radius:8px;padding:4px 8px;display:none;white-space:pre-wrap;}
+
+  /* ---------- recap card ---------- */
+  #recap{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(10,8,16,.45);}
+  #recap.on{display:flex;}
+  #recap .card{background:linear-gradient(180deg,#fffaf0,#f7ecd7);border-radius:16px;max-width:430px;width:calc(100% - 36px);
+    padding:20px 22px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5);border:1px solid #e5cf9f;}
+  #recap h2{margin:0 0 4px;font-size:19px;color:#5a3c1c;font-weight:normal;letter-spacing:.02em;}
+  #recap .sub{font-size:12px;color:#9a7c52;margin-bottom:10px;font-style:italic;}
+  #recap ul{margin:0 0 14px;padding-left:18px;}
+  #recap li{margin:7px 0;font-size:14.5px;line-height:1.45;}
+  #recap button,#whisperForm button{background:linear-gradient(180deg,#c98d4e,#a96f36);color:#fff8ea;border:none;
+    font-family:inherit;font-size:14px;padding:9px 18px;border-radius:20px;cursor:pointer;box-shadow:0 3px 8px rgba(120,70,20,.35);}
+  #recap button:active,#whisperForm button:active{transform:translateY(1px);}
+
+  /* ---------- panel ---------- */
+  #panel{flex:1;display:flex;flex-direction:column;min-height:0;margin:10px;background:var(--panel);border-radius:14px;overflow:hidden;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);}
+  #tabs{display:flex;border-bottom:1px solid #eadfc6;background:#fdf6e7;}
+  #tabs button{flex:1;border:none;background:none;font-family:inherit;font-size:13.5px;padding:11px 2px;cursor:pointer;color:#8a6c42;letter-spacing:.02em;}
+  #tabs button.sel{color:#4c3319;font-weight:bold;box-shadow:inset 0 -3px 0 var(--amber);}
+  #tabs button .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#d86f5f;margin-left:4px;vertical-align:2px;}
+  .tabpage{display:none;overflow-y:auto;padding:14px 16px;flex:1;min-height:0;}
+  .tabpage.on{display:block;}
+
+  .soulcard{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid #f0e4c8;}
+  .soulcard:last-child{border-bottom:none;}
+  .soulcard img{width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:50% 22%;border:2px solid #e8d5a8;flex:0 0 auto;}
+  .soulcard .who{flex:1;min-width:0;}
+  .soulcard h3{margin:0;font-size:16px;font-weight:normal;color:#4c3319;}
+  .soulcard .state{font-size:12.5px;color:#8a6c42;font-style:italic;margin:2px 0 6px;}
+  .bar{height:7px;background:#efe3c6;border-radius:4px;overflow:hidden;}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#a8c5b5,#7fae7a);border-radius:4px;transition:width 1s;}
+  .goalrow{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:#6d5326;margin-top:4px;}
+  .mem{font-size:12.5px;color:#77603c;margin-top:6px;line-height:1.4;}
+  .badge{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:9px;background:#efe3c6;color:#8a6c42;vertical-align:2px;margin-left:6px;}
+  .badge.open{background:#ffe1a8;color:#7a4d12;font-weight:bold;}
+
+  #journalList{font-size:13.5px;line-height:1.5;}
+  #journalList .j{padding:7px 0;border-bottom:1px dashed #ecdfc0;}
+  #journalList .t{color:#a5854f;font-size:11.5px;letter-spacing:.03em;}
+  #journalList .imp{color:#7a4d12;}
+  .metrics{font-size:11px;color:#b49b6d;margin-top:12px;font-style:italic;}
+
+  #whisperForm label{font-size:13px;color:#6d5326;display:block;margin:10px 0 5px;}
+  #whisperForm select,#whisperForm textarea{width:100%;font-family:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #dcc895;border-radius:10px;background:#fffdf6;color:var(--ink);}
+  #whisperForm textarea{min-height:74px;resize:vertical;}
+  #recipStatus{font-size:13px;line-height:1.5;background:#fdf3da;border:1px solid #ecd9a4;border-radius:10px;padding:9px 12px;}
+  #whisperMsg{font-size:13px;color:#7a4d12;margin-top:9px;min-height:18px;font-style:italic;}
+  .queueItem{font-size:13px;background:#f6ecd2;border-radius:9px;padding:8px 11px;margin-top:8px;line-height:1.45;}
+  .smallnote{font-size:12px;color:#9a7c52;line-height:1.5;font-style:italic;}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+  "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.4.0/spark.module.js"
+} }
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="box">
+    <div id="stage">
+      <div id="tint"></div>
+      <div id="vig"></div>
+      <div id="hud">
+        <div id="clock"><b>Day 1</b> · 06:00</div>
+        <div id="weather">☀️ Golden</div>
+      </div>
+      <div id="hint">drag to look around · scroll to come closer</div>
+      <div id="caption"></div>
+      <div id="qualrow">
+        <button data-q="100k" class="sel">valley · light</button>
+        <button data-q="500k">valley · rich</button>
+      </div>
+      <div id="speedrow">
+        <button data-speed="1">real time</button>
+        <button data-speed="60" class="sel">a day in 24 min</button>
+        <button data-speed="240">a day in 6 min</button>
+      </div>
+      <div id="errbox"></div>
+      <div id="loading"><div>Growing the valley…</div><small>the world is real geometry now — it takes a breath to arrive</small></div>
+      <div id="recap"><div class="card">
+        <h2>While you were away</h2>
+        <div class="sub" id="recapSub">the valley carried on…</div>
+        <ul id="recapList"></ul>
+        <button id="recapBtn">Return to the valley</button>
+      </div></div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div id="tabs">
+      <button data-tab="souls" class="sel">The Inhabitants</button>
+      <button data-tab="whisper">Whisper<span id="whisperDot"></span></button>
+      <button data-tab="journal">Journal</button>
+      <button data-tab="about">About</button>
+    </div>
+
+    <div class="tabpage on" id="tab-souls"></div>
+
+    <div class="tabpage" id="tab-whisper">
+      <div id="recipStatus"></div>
+      <form id="whisperForm">
+        <label for="whisperWho">Speak to</label>
+        <select id="whisperWho"></select>
+        <label for="whisperText">Your words — they will arrive as a dream, or as a thought in stillness</label>
+        <textarea id="whisperText" maxlength="280" placeholder="Say it the way you would wish it into the world…"></textarea>
+        <div style="margin-top:10px;"><button type="submit">Send it on the wind</button></div>
+        <div id="whisperMsg"></div>
+      </form>
+      <div id="queueBox"></div>
+      <p class="smallnote">A god does not chat on demand. Your words can only land while they sleep or sit in meditation — if they are awake, the words wait, and arrive when they are ready to receive. And what the words do once they land is theirs to decide.</p>
+    </div>
+
+    <div class="tabpage" id="tab-journal">
+      <div id="journalList"></div>
+      <div class="metrics" id="metrics"></div>
+    </div>
+
+    <div class="tabpage" id="tab-about">
+      <p style="font-size:14.5px;line-height:1.6;margin-top:2px;"><b>Elsewhere — living world v1.</b> A world that carries on. Three inhabitants live in this valley whether or not anyone is watching: they work, rest, visit each other, dream, and pursue goals of their own across days. This time the valley is a real place — you are looking into it, not at a picture of it.</p>
+      <p style="font-size:14.5px;line-height:1.6;">You are not a character here. You are the presence they sense but never see — and you can only reach them when they are ready to receive: asleep, or in meditation. A golden halo around a figure in the valley means someone is receptive right now.</p>
+      <p class="smallnote">Fairy Miniature art direction, locked Nov 4, 2026. They still carry their roles as names — naming day is coming. Progress is saved on this device; the valley keeps its own time while you are gone, and catches up when you return. The valley's light is baked golden; the day-night cycle is a tint over the scene, honestly labelled.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   ELSEWHERE — living world v1. The brain, ported from demo v0.
+   The simulation decides what happens. Words (dialogue, dream
+   replies) are written from templates that read memory — no
+   language model ever changes world state.
+   ============================================================ */
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------------- the inhabitants ---------------- */
+const SOUL_DEFS=[
+ {id:"gardener", name:"The Gardener", role:"keeps the valley fed", img:"portrait-gardener.jpg",
+  traits:["patient","steady"], home:"cottageA", workSpot:"garden", medSpot:"bank",
+  goalName:"A full garden by the river", goalRate:2.0,
+  stages:[[0,"Seeds in the cold ground"],[10,"First sprouts up"],[25,"Rows greening"],[40,"First flowers"],[55,"Carrots swelling"],[70,"Beans on the poles"],[85,"Almost a feast"],[100,"A full garden by the river"]],
+  dreamLines:[
+    "In her dream the soil was warm and listening. She woke with the words still in her hands like seeds.",
+    "She dreamed the garden leaned toward a new light. Some of it she understood. Some she kept.",
+    "A dream of rain on the river bank, and a sentence she could not quite hold. She will carry it into the morning anyway."]},
+ {id:"tinkerer", name:"The Tinkerer", role:"builds things that sometimes work", img:"portrait-tinkerer.jpg",
+  traits:["restless","bright"], home:"cottageB", workSpot:"wheel", medSpot:"river",
+  goalName:"A working waterwheel", goalRate:1.8,
+  stages:[[0,"A pile of good intentions"],[12,"Wood gathered"],[28,"Frame raised"],[46,"Wheel taking shape"],[62,"Wheel mounted"],[78,"It turns — badly"],[90,"Almost true"],[100,"The waterwheel turns"]],
+  dreamLines:[
+    "He dreamed in gears and water. A sentence turned like a wheel in it — he woke reaching for his tools.",
+    "In the dream, someone had already solved it. He could not see their face. He woke determined to deserve the answer.",
+    "His dream smelled of river stone. The words in it were half washed away, but the shape of them stayed."]},
+ {id:"wanderer", name:"The Wanderer", role:"carries news between houses", img:"portrait-wanderer.jpg",
+  traits:["curious","receptive"], home:"rock", workSpot:"path2", medSpot:"rock",
+  goalName:"A map of the whole valley", goalRate:2.6,
+  stages:[[0,"Blank paper, full valley"],[15,"The near paths drawn"],[32,"The river traced"],[48,"The far hill climbed"],[64,"Hidden places found"],[80,"Only the mist left"],[100,"The whole valley, mapped"]],
+  dreamLines:[
+    "He dreamed of a path he has not walked yet, and a voice like weather moving through it. He woke facing the hills.",
+    "In stillness the words settled on him like first snow — quiet, and impossible to ignore.",
+    "He dreamed the valley was speaking in its sleep. He listened the way he was taught: without grabbing."]}
+];
+const byId=id=>SOUL_DEFS.find(s=>s.id===id);
+
+/* ---------------- chatter (dialogue only — never changes state) ---------------- */
+const CHATTER=[
+ ["gardener","tinkerer","Your wheel kept me awake. It squeaks in B-flat.","It is not squeaking. It is practising."],
+ ["tinkerer","gardener","If I dam the side-stream, your beds get water twice as fast.","And twice as muddy. We have talked about this."],
+ ["wanderer","gardener","Beyond the far hill the mist sits all morning. It smells of apples.","Then bring me back a pocket of that air.","wanderer","I will bring you the story of it. That travels better."],
+ ["gardener","wanderer","You walk too much and eat too little.","I eat stories. Very filling. Mostly."],
+ ["tinkerer","wanderer","Hold this rope. If the wheel lifts me, catch.","And if it lifts us both?","tinkerer","Then we have invented something."],
+ ["wanderer","tinkerer","The river showed me a stone shaped like a gear.","Everything the river makes is a gear, if you wait long enough."]];
+
+/* ---------------- state ---------------- */
+const SAVE_KEY="elsewhere-3d-v1";
+let S=null;
+function freshState(){
+  const now=new Date();
+  let mins=now.getHours()*60+now.getMinutes();
+  const tod=new URLSearchParams(location.search).get('tod'); // ?tod=10:00 starts the clock at a chosen hour (demos/QA)
+  if(tod&&/^\d{1,2}:\d{2}$/.test(tod)){ const pp=tod.split(':').map(Number); mins=pp[0]*60+pp[1]; }
+  return {
+    v:1, anchorReal:Date.now(), anchorWorld:mins, speed:60, day:1,
+    weather:pick(["Golden","Sunny","Breezy"]),
+    souls:{ gardener:{goal:4,mem:[],imp:[]}, tinkerer:{goal:2,mem:[],imp:[]}, wanderer:{goal:6,mem:[],imp:[]} },
+    aff:{ "gardener-tinkerer":60, "gardener-wanderer":70, "tinkerer-wanderer":55 },
+    journal:[], queue:[], lastSeenReal:Date.now(), lastRecapDay:0,
+    metrics:{opens:0,whispers:0,delivered:0,recaps:0,godContacts:0},
+    flags:{}
+  };
+}
+function save(){ try{ S.anchorReal=Date.now(); S.anchorWorld=nowWorld(); localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ S=JSON.parse(raw); if(S&&S.v===1) return true; } }catch(e){}
+  S=freshState(); return false;
+}
+function nowWorld(){
+  return S.anchorWorld + ((Date.now()-S.anchorReal)/60000)*S.speed;
+}
+function worldClock(wm){
+  const total=Math.floor(wm);
+  const day=Math.floor(total/1440)+1;
+  const m=total%1440;
+  return { day, h:Math.floor(m/60), m:m%60, mins:m };
+}
+function fmtClock(wm){ const c=worldClock(wm); return "Day "+c.day+" · "+String(c.h).padStart(2,"0")+":"+String(c.m).padStart(2,"0"); }
+function stamp(wm){ const c=worldClock(wm); return "Day "+c.day+", "+String(c.h).padStart(2,"0")+":"+String(c.m).padStart(2,"0"); }
+
+/* ---------------- journal + memory ---------------- */
+function journal(wm,text,kind,score){
+  S.journal.push({t:wm,text,kind:kind||"event",score:score||2});
+  if(S.journal.length>240) S.journal=S.journal.slice(-240);
+}
+function remember(id,wm,text){
+  const m=S.souls[id].mem; m.push({t:wm,text});
+  if(m.length>42) m.shift();
+}
+
+/* ---------------- the shape of a day ---------------- */
+function scheduleFor(id,mins,weather){
+  const rainy=(weather==="Soft rain"||weather==="Misty");
+  if(mins>=1290||mins<330) return {state:"sleep",spot:byId(id).home};
+  if(mins<375) return {state:"meditate",spot:byId(id).medSpot};
+  if(mins<420) return {state:"social",spot:"meet"};
+  if(mins<720) return workBlock(id,mins,rainy);
+  if(mins<780) return {state:"social",spot:"meet"};
+  if(mins<1050) return workBlock(id,mins,rainy);
+  if(mins<1110) return {state:"social",spot:"meet"};
+  if(mins<1155) return {state:"meditate",spot:byId(id).medSpot};
+  return {state:"evening",spot:byId(id).home};
+}
+function workBlock(id,mins,rainy){
+  if(id==="wanderer"){
+    if(rainy) return {state:"visit",spot:pick(["cottageA","cottageB"])};
+    const route=["path1","path2","path3","river","rock","path1"];
+    const idx=Math.floor(mins/45)%route.length;
+    return {state:"walk",spot:route[idx]};
+  }
+  return {state:"work",spot:byId(id).workSpot};
+}
+const receptive=p=>p.state==="sleep"||p.state==="meditate";
+const stateLabel={sleep:"Asleep",meditate:"In meditation",social:"Together at the meeting stone",work:"At work",walk:"Out walking the valley",visit:"Visiting",evening:"Winding down at home"};
+
+/* ---------------- weather ---------------- */
+const WEATHERS=[["Golden","🌤️"],["Sunny","☀️"],["Breezy","🍃"],["Soft rain","🌧️"],["Misty","🌫️"]];
+function rollWeather(day){ const r=Math.abs(Math.sin(day*7919)*10000)%1; const i=Math.floor(r*WEATHERS.length); return WEATHERS[i][0]; }
+function weatherIcon(w){ const f=WEATHERS.find(x=>x[0]===w); return f?f[1]:"🌤️"; }
+
+/* ============================================================
+   THE LIFE ENGINE — decides what happens. Never the words.
+   ============================================================ */
+let plan={};
+function stageIdx(def,g){ let i=0; def.stages.forEach((s,j)=>{ if(g>=s[0]) i=j; }); return i; }
+function stageLabel(def,g){ return def.stages[stageIdx(def,g)][1]; }
+
+function simStep(wm,dt,live){
+  const c=worldClock(wm);
+  if(S.curDay!==c.day){
+    S.curDay=c.day; S.weather=rollWeather(c.day);
+    journal(wm,"Dawn. The valley wakes under a "+S.weather.toLowerCase()+" sky.","dawn",1);
+  }
+  const newPlan={};
+  for(const def of SOUL_DEFS){
+    const p=scheduleFor(def.id,c.mins,S.weather);
+    newPlan[def.id]=p;
+    const prevState=S.flags["st_"+def.id];
+    if(prevState&&(prevState==="sleep"||prevState==="meditate")&&!receptive(p)) resolveImpressions(def.id,wm);
+    S.flags["st_"+def.id]=p.state;
+    const soul=S.souls[def.id];
+    const working=(def.id==="wanderer") ? (p.state==="walk") : (p.state==="work");
+    if(working&&soul.goal<100){
+      const before=stageIdx(def,soul.goal);
+      soul.goal=Math.min(100,soul.goal+def.goalRate*dt/60);
+      const after=stageIdx(def,soul.goal);
+      if(after>before){
+        journal(wm,def.name+": "+stageLabel(def,soul.goal)+".","milestone",4);
+        remember(def.id,wm,"Milestone: "+stageLabel(def,soul.goal).toLowerCase()+".");
+      }
+      if(soul.goal>=100&&!S.flags["done_"+def.id]){
+        S.flags["done_"+def.id]=1;
+        const doneLine={gardener:"The garden is full. Tonight, the whole valley eats from it.",
+          tinkerer:"The waterwheel turns — steady, real, his. He stood and watched it for a long time.",
+          wanderer:"The map is finished. He is already looking at its edges, where the next valley starts."}[def.id];
+        journal(wm,doneLine,"milestone",5);
+        remember(def.id,wm,"I did it. "+stageLabel(def,100)+".");
+      }
+    }
+  }
+  plan=newPlan;
+  if(newPlan.gardener.state==="social"){
+    for(const k in S.aff) S.aff[k]=Math.min(100,S.aff[k]+dt*0.03);
+  }
+  if(newPlan.gardener.state==="social"&&(!S.flags.lastChat||wm-S.flags.lastChat>30)){
+    S.flags.lastChat=wm;
+    const ch=pick(CHATTER);
+    const a=byId(ch[0]), b=byId(ch[1]);
+    journal(wm,a.name+" and "+b.name+" talked by the meeting stone.","chat",1);
+    if(live) S.flags.bubble={who:ch[0],text:"“"+ch[2]+"”",until:wm+9};
+    if(Math.random()<0.5) S.aff[ch[0]+"-"+ch[1]]=Math.min(100,(S.aff[ch[0]+"-"+ch[1]]||50)+2);
+  }
+  const anyoneAwake=SOUL_DEFS.some(d=>!receptive(newPlan[d.id]));
+  if(anyoneAwake&&Math.random()<dt*0.008){
+    const ev=pick([
+      ()=>{ journal(wm,"The Wanderer left river-smooth stones on the Gardener's step. No note. None needed.","event",3); S.aff["gardener-wanderer"]=Math.min(100,S.aff["gardener-wanderer"]+4); },
+      ()=>{ journal(wm,"The Gardener and the Tinkerer argued about the fence line. It passed, the way weather passes.","event",3); S.aff["gardener-tinkerer"]=Math.max(0,S.aff["gardener-tinkerer"]-5); },
+      ()=>{ journal(wm,"The Tinkerer found a stone by the river shaped exactly like a gear, and refuses to explain why he is smiling.","event",3); },
+      ()=>{ journal(wm,"The Gardener planted a new row today, straight as a sentence.","event",3); },
+      ()=>{ journal(wm,"The Wanderer named a star after the valley. The valley has not commented.","event",3); },
+      ()=>{ journal(wm,"Someone — accounts differ — left wildflowers at the meeting stone.","event",3); }
+    ]); ev();
+  }
+  if(S.queue.length){
+    const still=[];
+    for(const item of S.queue){
+      if(receptive(newPlan[item.to])) deliver(item.to,item,wm,live);
+      else still.push(item);
+    }
+    S.queue=still;
+  }
+}
+
+/* ---------------- the God rule: delivery + fate ---------------- */
+function deliver(id,item,wm,live){
+  const def=byId(id);
+  S.metrics.delivered++; S.metrics.godContacts++;
+  S.souls[id].imp.push({text:item.text,at:wm,fate:"pending"});
+  remember(id,wm,"Words arrived in stillness: “"+item.text+"”");
+  const inSleep=scheduleFor(id,worldClock(wm).mins,S.weather).state==="sleep";
+  journal(wm,"Your words reached "+def.name+" "+(inSleep?"in their sleep":"in meditation")+" — arriving as a dream, the way such things arrive.","impression",5);
+  if(live) S.flags.bubble={who:id,text:pick(def.dreamLines),until:wm+14};
+}
+const HOOKS=[
+ {soul:"gardener",words:["river","water","bank","stream"],run:(wm)=>{ const s=S.souls.gardener; s.goal=Math.min(100,s.goal+6);
+   journal(wm,"Your words reached the Gardener in her sleep — she woke early and moved the planting to the river bank.","impression",5);
+   remember("gardener",wm,"I woke knowing the garden wants the river bank. I cannot say how I know."); }},
+ {soul:"tinkerer",words:["wheel","turn","gear","axle","river"],run:(wm)=>{ const s=S.souls.tinkerer; s.goal=Math.min(100,s.goal+7);
+   journal(wm,"Your words reached the Tinkerer in his sleep — he woke before dawn and re-seated the axle the way the dream showed him.","impression",5);
+   remember("tinkerer",wm,"The dream fixed the wheel. I only held the tools."); }},
+ {soul:"wanderer",words:["hill","map","path","north","beyond","far"],run:(wm)=>{ const s=S.souls.wanderer; s.goal=Math.min(100,s.goal+7);
+   journal(wm,"Your words reached the Wanderer in meditation — he rose with the far hill in his mind and set out before breakfast.","impression",5);
+   remember("wanderer",wm,"Stillness pointed at the far hill. I am going."); }}
+];
+function resolveImpressions(id,wm){
+  const def=byId(id), soul=S.souls[id];
+  for(const imp of soul.imp){
+    if(imp.fate!=="pending") continue;
+    const text=imp.text.toLowerCase();
+    const hook=HOOKS.find(h=>h.soul===id&&h.words.some(w=>text.includes(w)));
+    if(hook){ imp.fate="acted"; hook.run(wm); continue; }
+    if(/friend|visit|share|together|each other/.test(text)){
+      imp.fate="acted";
+      const other=pick(SOUL_DEFS.filter(d=>d.id!==id)).id;
+      const key=[id,other].sort().join("-"); if(S.aff[key]!==undefined) S.aff[key]=Math.min(100,S.aff[key]+8);
+      journal(wm,"Your words reached "+def.name+" — by midday they had quietly rearranged the day around "+byId(other).name+".","impression",5);
+      remember(id,wm,"The dream said: be close. I am trying it.");
+      continue;
+    }
+    const actP= id==="wanderer"?0.65 : id==="gardener"?0.55 : 0.5;
+    const r=Math.random();
+    if(r<actP){
+      imp.fate="acted"; soul.goal=Math.min(100,soul.goal+4);
+      const tail={gardener:"By midday she had quietly re-ordered the planting, following a logic she calls a feeling.",
+        tinkerer:"By midday the workbench had been rearranged around the idea, as if it had always been his.",
+        wanderer:"By midday he was three paths further than planned, following it."}[id];
+      journal(wm,"Your words reached "+def.name+". "+tail,"impression",5);
+      remember(id,wm,"Something I dreamed has hands now. It is moving my day.");
+    } else if(r<actP+0.25){
+      imp.fate="twisted";
+      const twist={gardener:"She understood the words her own way: the flowers now spell nothing at all, but they are arranged like an answer.",
+        tinkerer:"He understood the words his own way: the wheel is now braver, bigger, and only slightly more dangerous.",
+        wanderer:"He understood the words his own way: he walked them in a circle around the valley, to keep them safe."}[id];
+      journal(wm,"Your words reached "+def.name+", and were gently misunderstood. "+twist,"impression",5);
+      remember(id,wm,"I may have the dream wrong. I am keeping it anyway.");
+    } else {
+      imp.fate="faded";
+      journal(wm,"The impression faded by noon, the way dreams do. What remains for "+def.name+" is a feeling of having been spoken to.","impression",5);
+      remember(id,wm,"There was a dream. It is gone. The kindness of it is not.");
+    }
+  }
+}
+let lastWm=null;
+function advanceTo(target){
+  if(lastWm===null){ lastWm=target; return; }
+  let guard=0;
+  while(lastWm<target&&guard<6000){
+    const dt=Math.min(5,target-lastWm);
+    simStep(lastWm,dt,(target-lastWm)<=12);
+    lastWm+=dt; guard++;
+  }
+  lastWm=target;
+}
+
+/* ============================================================
+   PANEL (DOM) — inhabitants / whisper / journal / recap
+   ============================================================ */
+function renderPanel(){
+  const wm=nowWorld(), c=worldClock(wm);
+  $("#clock").innerHTML="<b>Day "+c.day+"</b> · "+String(c.h).padStart(2,"0")+":"+String(c.m).padStart(2,"0");
+  $("#weather").textContent=weatherIcon(S.weather)+" "+S.weather;
+  const cap=$("#caption"), b=S.flags.bubble;
+  if(b&&wm<b.until){ cap.textContent=b.text; cap.classList.add("on"); } else cap.classList.remove("on");
+  renderSoulsTab(c);
+  renderJournal();
+  $("#whisperDot").innerHTML= SOUL_DEFS.some(d=>receptive(plan[d.id]||scheduleFor(d.id,c.mins,S.weather))) ? '<span class="dot"></span>' : "";
+  if($("#tab-whisper").classList.contains("on")) renderWhisperStatus();
+}
+function renderSoulsTab(c){
+  const box=$("#tab-souls");
+  box.innerHTML=SOUL_DEFS.map(def=>{
+    const s=S.souls[def.id], p=plan[def.id]||scheduleFor(def.id,c.mins,S.weather);
+    const lastMem=s.mem.length?s.mem[s.mem.length-1].text:"Nothing yet. The days are young.";
+    const pend=s.imp.filter(i=>i.fate==="pending").length;
+    return '<div class="soulcard"><img src="'+def.img+'" alt=""><div class="who">'
+      +'<h3>'+def.name+'<span class="badge'+(receptive(p)?" open":"")+'">'+(receptive(p)?"receptive now":stateLabel[p.state])+'</span></h3>'
+      +'<div class="state">'+def.role+' · '+def.traits.join(", ")+'</div>'
+      +'<div class="bar"><i style="width:'+Math.round(s.goal)+'%"></i></div>'
+      +'<div class="goalrow"><span>'+def.goalName+'</span><span>'+stageLabel(def,s.goal)+' · '+Math.round(s.goal)+'%</span></div>'
+      +'<div class="mem">Latest memory: '+esc(lastMem)+(pend?' <i>(carrying an unanswered impression)</i>':"")+'</div>'
+      +'</div></div>';
+  }).join("");
+}
+function renderJournal(){
+  const items=S.journal.slice(-30).reverse();
+  $("#journalList").innerHTML=items.map(j=>'<div class="j"><span class="t">'+stamp(j.t)+'</span><br><span class="'+(j.kind==="impression"?"imp":"")+'">'+esc(j.text)+'</span></div>').join("")||'<div class="j">Nothing yet.</div>';
+  const m=S.metrics;
+  $("#metrics").textContent="Test notes — opens: "+m.opens+" · whispers sent: "+m.whispers+" · words that landed: "+m.delivered+" · recaps seen: "+m.recaps;
+}
+function renderWhisperStatus(){
+  const wm=nowWorld(), c=worldClock(wm);
+  const lines=SOUL_DEFS.map(def=>{
+    const p=plan[def.id]||scheduleFor(def.id,c.mins,S.weather);
+    return receptive(p)
+      ? "<b>"+def.name+"</b> — "+(p.state==="sleep"?"asleep":"in meditation")+". Receptive: words sent now will land."
+      : "<b>"+def.name+"</b> — awake ("+stateLabel[p.state].toLowerCase()+"). Words sent now will wait on the wind.";
+  });
+  $("#recipStatus").innerHTML=lines.join("<br>");
+  const q=$("#queueBox");
+  q.innerHTML=S.queue.map(it=>'<div class="queueItem">🌬️ Waiting for '+byId(it.to).name+': “'+esc(it.text)+'”</div>').join("");
+}
+function switchTab(name){
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("sel",b.dataset.tab===name));
+  document.querySelectorAll(".tabpage").forEach(p=>p.classList.toggle("on",p.id==="tab-"+name));
+  if(name==="whisper") renderWhisperStatus();
+}
+document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+
+function setSpeed(v){
+  S.anchorWorld=nowWorld(); S.anchorReal=Date.now(); S.speed=v;
+  document.querySelectorAll("#speedrow button").forEach(b=>b.classList.toggle("sel",+b.dataset.speed===v));
+  save();
+}
+document.querySelectorAll("#speedrow button").forEach(b=>b.addEventListener("click",()=>setSpeed(+b.dataset.speed)));
+
+$("#whisperForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const to=$("#whisperWho").value, text=$("#whisperText").value.trim();
+  const msg=$("#whisperMsg");
+  if(!text){ msg.textContent="Say something first — even a god whispers actual words."; return; }
+  const wm=nowWorld(), c=worldClock(wm);
+  const p=scheduleFor(to,c.mins,S.weather);
+  const item={to,text,at:wm};
+  S.metrics.whispers++;
+  if(receptive(p)){
+    deliver(to,item,wm,true);
+    msg.textContent="It lands now. Watch — and check the Journal for what it becomes by morning.";
+  } else {
+    S.queue.push(item);
+    msg.textContent=byId(to).name+" is awake. Your words are on the wind — they will land at the next sleep or meditation.";
+  }
+  $("#whisperText").value="";
+  renderWhisperStatus(); renderPanel(); save();
+});
+
+function maybeRecap(had){
+  const since=(S.lastSeenWorld===undefined? -1 : S.lastSeenWorld);
+  const fresh=S.journal.filter(j=>j.t>since);
+  const strong=fresh.filter(j=>j.score>=3);
+  if(!had||!fresh.length||(!strong.length&&fresh.length<3)) return;
+  const top=fresh.slice().sort((a,b)=>b.score-a.score).slice(0,3).sort((a,b)=>a.t-b.t);
+  $("#recapList").innerHTML=top.map(j=>"<li>"+esc(j.text)+"</li>").join("");
+  $("#recapSub").textContent="since you last looked · "+fmtClock(nowWorld());
+  $("#recap").classList.add("on");
+  S.metrics.recaps++;
+}
+$("#recapBtn").addEventListener("click",()=>{
+  $("#recap").classList.remove("on");
+  S.lastSeenWorld=nowWorld(); save();
+});
+
+/* ---------------- sim boot (the 3D stage boots separately) ---------------- */
+function bootSim(){
+  const had=load();
+  if(S.lastSeenWorld===undefined) S.lastSeenWorld=S.anchorWorld;
+  if(S.curDay===undefined) S.curDay=worldClock(S.anchorWorld).day;
+  S.metrics.opens++;
+  if(!had){
+    const wm=S.anchorWorld;
+    journal(wm,"The valley wakes for the first time: three inhabitants, one river, and all the days ahead.","event",2);
+    for(const def of SOUL_DEFS) remember(def.id,wm,"The first morning. Everything is possible and nothing is finished.");
+  }
+  const sel=$("#whisperWho");
+  sel.innerHTML=SOUL_DEFS.map(d=>'<option value="'+d.id+'">'+d.name+'</option>').join("");
+  sel.addEventListener("change",renderWhisperStatus);
+  document.querySelectorAll("#speedrow button").forEach(b=>b.classList.toggle("sel",+b.dataset.speed===S.speed));
+  lastWm=S.anchorWorld;
+  let target=nowWorld();
+  if(target-lastWm>4320) target=lastWm+4320;
+  advanceTo(target);
+  S.anchorWorld=target; S.anchorReal=Date.now();
+  for(const def of SOUL_DEFS) plan[def.id]=scheduleFor(def.id,worldClock(target).mins,S.weather);
+  renderPanel(); renderWhisperStatus();
+  maybeRecap(had);
+  save();
+  let tick=0;
+  setInterval(()=>{
+    advanceTo(nowWorld());
+    renderPanel();
+    if(++tick%10===0) save();
+  },1500);
+}
+bootSim();
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+/* ============================================================
+   THE STAGE — a real valley, looked into like a box window.
+   Splat = the look. Collider mesh (invisible) = the ground.
+   The sim (classic script above) decides where souls go;
+   this module only gives them bodies and a world to stand in.
+   ============================================================ */
+const stageEl=document.getElementById('stage');
+const loadingEl=document.getElementById('loading');
+const errEl=document.getElementById('errbox');
+const tintEl=document.getElementById('tint');
+const DEBUG=new URLSearchParams(location.search).has('debug');
+window.__errors=[];
+function showError(msg){
+  window.__errors.push(String(msg));
+  errEl.style.display='block';
+  errEl.textContent=window.__errors.slice(-3).join("\n");
+  const d=document.getElementById('debugdump'); if(d) dumpDebug();
+}
+addEventListener('error',e=>showError(e.message||e.error));
+addEventListener('unhandledrejection',e=>showError('promise: '+(e.reason&&e.reason.message||e.reason)));
+if(DEBUG){ const pre=document.createElement('pre'); pre.id='debugdump'; pre.style.cssText='position:fixed;left:0;bottom:0;max-height:40%;overflow:auto;background:rgba(0,0,0,.8);color:#9f9;font-size:10px;z-index:99;margin:0;padding:6px;'; document.body.appendChild(pre); }
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x191008); // warm cabinet dark behind the diorama
+const camera=new THREE.PerspectiveCamera(55,1,0.1,5000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+stageEl.insertBefore(renderer.domElement, stageEl.firstChild);
+scene.add(new SparkRenderer({renderer}));
+scene.add(new THREE.HemisphereLight(0xfff2d8,0x46543a,1.5));
+const sun=new THREE.DirectionalLight(0xffd9a0,2.1); sun.position.set(30,45,15); scene.add(sun);
+
+const worldGroup=new THREE.Group(); scene.add(worldGroup);
+let splat=null, colliderObj=null, rayTop=600;
+const ray=new THREE.Raycaster(), DOWN=new THREE.Vector3(0,-1,0);
+function groundHeight(x,z){
+  if(!colliderObj) return null;
+  ray.set(new THREE.Vector3(x,rayTop,z),DOWN);
+  const hit=ray.intersectObject(colliderObj,true)[0];
+  return hit?hit.point.y:null;
+}
+
+/* ---------- world loading + Marble semantics ---------- */
+async function fetchSemantics(){
+  try{
+    const r=await fetch('world.json'); if(!r.ok) return null;
+    const j=await r.json();
+    return (((j.assets||{}).splats||{}).semantics_metadata)||null;
+  }catch(e){ return null; }
+}
+function applySemantics(sem){
+  // Marble's splat and collider ship in the SAME native space (the factory
+  // playtest harness runs both untransformed, player eye = collider ground + 1.7).
+  // metric_scale_factor / ground_plane_offset describe the collider's relation
+  // to real-world meters — they are NOT a scene transform. Verified by probe:
+  // scaling the world by msf put the collider 11 units below the visible splat.
+  window.__semantics={msf:sem.metric_scale_factor||1, gpo:sem.ground_plane_offset||0};
+}
+async function loadSplat(url){
+  if(splat){ worldGroup.remove(splat); if(splat.dispose) splat.dispose(); }
+  splat=new SplatMesh({url});
+  splat.quaternion.set(1,0,0,0); // SPZ is Y-down vs three.js Y-up (Spark docs pattern)
+  worldGroup.add(splat);
+  await splat.initialized;
+}
+async function loadCollider(){
+  const gltf=await new GLTFLoader().loadAsync('world_collider.glb');
+  colliderObj=gltf.scene;
+  // The GLB is exported in the same Y-down frame as the SPZ: it needs the same
+  // PI-about-X flip as the splat, or its heightfield is upside-down (its flat
+  // "lid" up, the real valley floor hanging below). Verified against the
+  // splat's own gaussian centres: flipped collider ground == visible surface.
+  colliderObj.quaternion.set(1,0,0,0);
+  // DoubleSide: Marble colliders are not reliably wound for downward rays;
+  // raycast respects material.side, and the floor must answer from above.
+  colliderObj.traverse(o=>{ o.visible=false; if(o.isMesh&&o.material) o.material.side=THREE.DoubleSide; });
+  worldGroup.add(colliderObj);
+  worldGroup.updateMatrixWorld(true); // compose group transform NOW — raycasts/Box3 must not see a stale identity
+  const box=new THREE.Box3().setFromObject(colliderObj);
+  rayTop=box.max.y+50;
+}
+
+/* ---------- anchor discovery: ask the ground where life fits ---------- */
+let ANCH={}, CENTRE=new THREE.Vector3(), PATCH_R=10, FIG_H=1, WORLD_SPAN=10, groundStats={};
+function discoverAnchors(){
+  const box=new THREE.Box3().setFromObject(colliderObj);
+  const size=box.getSize(new THREE.Vector3()), ctr=box.getCenter(new THREE.Vector3());
+  const R=Math.min(size.x,size.z)*0.5;
+  // probe a grid; keep the heightfield so slope can judge what is "ground"
+  const step=Math.max(R/22,0.001), ext=R*0.9;
+  const n=Math.floor((2*ext)/step);
+  const grid=new Map();
+  for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
+    const x=ctr.x-ext+i*step, z=ctr.z-ext+j*step;
+    const y=groundHeight(x,z);
+    if(y!==null) grid.set(i+','+j,{x,z,y});
+  }
+  const hits=[...grid.values()];
+  // gentle = neighbours do not climb faster than ~1.1 per step (meadow, not cliff)
+  const gentle=[];
+  for(const [k,h] of grid){
+    const [i,j]=k.split(',').map(Number);
+    let ok=true;
+    for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nb=grid.get((i+di)+','+(j+dj));
+      if(nb&&Math.abs(nb.y-h.y)>step*1.1){ ok=false; break; }
+    }
+    if(ok) gentle.push(h);
+  }
+  const inner=gentle.filter(h=>Math.hypot(h.x-ctr.x,h.z-ctr.z)<R*0.42).map(h=>h.y).sort((a,b)=>a-b);
+  const medY=inner.length?inner[Math.floor(inner.length/2)]:(gentle.length?gentle.map(h=>h.y).sort((a,b)=>a-b)[Math.floor(gentle.length/2)]:ctr.y);
+  const band=Math.max(R*0.10,1.2);
+  const playable=gentle.filter(h=>Math.abs(h.y-medY)<band);
+  const near=playable.filter(h=>Math.hypot(h.x-ctr.x,h.z-ctr.z)<R*0.34);
+  const pool=near.length?near:(playable.length?playable:gentle);
+  let cx=ctr.x, cz=ctr.z;
+  if(pool.length){ cx=pool.reduce((s,h)=>s+h.x,0)/pool.length; cz=pool.reduce((s,h)=>s+h.z,0)/pool.length; }
+  CENTRE.set(cx,medY,cz);
+  PATCH_R=R*0.55;
+  WORLD_SPAN=Math.max(size.x,size.z);
+  FIG_H=clamp(WORLD_SPAN*0.10,0.5,6);
+  // Life happens in the valley bowl: the collider's outer apron slopes have ground
+  // the splat does not show, so anchors stay in the core around the centre where
+  // collider and visible terrain agree — figures must stand on ground you can SEE.
+  const corePool=playable.filter(h=>Math.hypot(h.x-cx,h.z-cz)<PATCH_R*0.62);
+  const snapSrc=corePool.length>=10?corePool:playable;
+  // snapping honours separation so the named places never collapse onto one point
+  const chosen=[{x:cx,z:cz}];
+  const snap=(dx,dz,minSep)=>{
+    const tx=cx+dx*PATCH_R, tz=cz+dz*PATCH_R;
+    const cand=snapSrc.slice().sort((a,b)=>((a.x-tx)**2+(a.z-tz)**2)-((b.x-tx)**2+(b.z-tz)**2));
+    let best=null;
+    for(const h of cand){
+      if(chosen.every(c=>Math.hypot(c.x-h.x,c.z-h.z)>=minSep)){ best=h; break; }
+    }
+    if(!best) best=cand[0];
+    if(best){ chosen.push({x:best.x,z:best.z}); return new THREE.Vector3(best.x,best.y,best.z); }
+    return new THREE.Vector3(tx,medY,tz);
+  };
+  const sep=FIG_H*1.05;
+  ANCH={
+    meet:    new THREE.Vector3(cx,medY,cz),
+    garden:  snap(-0.38, 0.10, sep),
+    wheel:   snap( 0.34, 0.30, sep),
+    river:   snap( 0.05, 0.44, sep),
+    bank:    snap(-0.15, 0.40, sep),
+    cottageA:snap(-0.28,-0.32, sep),
+    cottageB:snap( 0.36,-0.26, sep),
+    path1:   snap( 0.18, 0.12, FIG_H*0.8),
+    path2:   snap( 0.50, 0.18, FIG_H*0.8),
+    path3:   snap( 0.52,-0.28, FIG_H*0.8)
+  };
+  // the lookout: highest core ground at a good remove from centre
+  let rock=null, rb=-1e18;
+  for(const h of snapSrc){
+    const d=Math.hypot(h.x-cx,h.z-cz);
+    if(d>PATCH_R*0.30&&d<PATCH_R*0.66&&h.y>rb){ rb=h.y; rock=h; }
+  }
+  ANCH.rock= rock?new THREE.Vector3(rock.x,rock.y,rock.z):snap(0.55,-0.50,sep);
+  groundStats={hits:hits.length, gentle:gentle.length, playable:playable.length, medY:+medY.toFixed(2),
+    grpScale:+worldGroup.matrixWorld.elements[0].toFixed(3), grpY:+worldGroup.matrixWorld.elements[13].toFixed(2),
+    boxSize:[+size.x.toFixed(1),+size.y.toFixed(1),+size.z.toFixed(1)],
+    centre:[+cx.toFixed(1),+cz.toFixed(1)], patchR:+PATCH_R.toFixed(1), figH:+FIG_H.toFixed(2)};
+}
+function dumpDebug(){
+  const d=document.getElementById('debugdump'); if(!d) return;
+  const actorsOut={};
+  for(const id in actors){ const a=actors[id]; actorsOut[id]=[+a.pos.x.toFixed(1),+a.pos.y.toFixed(1),+a.pos.z.toFixed(1)]; }
+  const anchOut={}; for(const k in ANCH) anchOut[k]=[+ANCH[k].x.toFixed(1),+ANCH[k].y.toFixed(1),+ANCH[k].z.toFixed(1)];
+  d.textContent=JSON.stringify({stats:groundStats, semantics:window.__semantics||null, anchors:anchOut,
+    plan, actors:actorsOut, cam:{az:+cam.az.toFixed(2),rad:+cam.rad.toFixed(1)}, errors:window.__errors},null,1);
+}
+
+/* ---------- figure building: Fairy Miniature, from primitives ---------- */
+const MAT={};
+function mat(c){ if(!MAT[c]) MAT[c]=new THREE.MeshStandardMaterial({color:c,roughness:0.92,metalness:0}); return MAT[c]; }
+function textSprite(text,{fs=44,fg='#fff8ea',bg='rgba(30,20,10,0.55)',pad=18}={}){
+  const cv=document.createElement('canvas'); const g=cv.getContext('2d');
+  g.font='600 '+fs+'px Georgia,serif';
+  const w=Math.ceil(g.measureText(text).width)+pad*2, h=fs+pad*1.4;
+  cv.width=w; cv.height=h;
+  const r=18; g.beginPath(); g.roundRect(2,2,w-4,h-4,r); g.fillStyle=bg; g.fill();
+  g.font='600 '+fs+'px Georgia,serif'; g.fillStyle=fg; g.textAlign='center'; g.textBaseline='middle';
+  g.fillText(text,w/2,h/2+2);
+  const tex=new THREE.CanvasTexture(cv);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));
+  sp.scale.set(w/h,1,1);
+  return sp;
+}
+function glowSprite(inner='rgba(255,205,110,1)'){
+  const cv=document.createElement('canvas'); cv.width=cv.height=128;
+  const g=cv.getContext('2d');
+  const gr=g.createRadialGradient(64,64,4,64,64,62);
+  gr.addColorStop(0,inner); gr.addColorStop(0.45,'rgba(255,190,90,0.35)'); gr.addColorStop(1,'rgba(255,180,80,0)');
+  g.fillStyle=gr; g.fillRect(0,0,128,128);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+  return sp;
+}
+function makeFigure(def){
+  const H=FIG_H;
+  const g={ group:new THREE.Group(), inner:new THREE.Group() };
+  g.group.add(g.inner);
+  // soft blob shadow on the ground
+  const sh=new THREE.Mesh(new THREE.CircleGeometry(0.42*H,20),
+    new THREE.MeshBasicMaterial({color:0x1a2410,transparent:true,opacity:0.28,depthWrite:false}));
+  sh.rotation.x=-Math.PI/2; sh.position.y=0.02*H; g.group.add(sh);
+  // meditation ring (hidden unless meditating)
+  const ring=new THREE.Mesh(new THREE.RingGeometry(0.52*H,0.74*H,32),
+    new THREE.MeshBasicMaterial({color:0xffcf7a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
+  ring.rotation.x=-Math.PI/2; ring.position.y=0.03*H; g.group.add(ring); g.ring=ring;
+  const P={ // Fairy Miniature palettes
+    gardener:{body:0x6da34f, hair:0x7a4a26, skin:0xf2c49b},
+    tinkerer:{body:0x8a5a34, hair:0x4a3220, skin:0xf2c49b},
+    wanderer:{body:0x5d6f8a, hair:0x5a4632, skin:0xf2c49b}
+  }[def.id];
+  const inner=g.inner;
+  const body=new THREE.Mesh(new THREE.SphereGeometry(0.34*H,24,18),mat(P.body));
+  body.scale.set(1,1.18,0.95); body.position.y=0.40*H; inner.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.30*H,24,18),mat(P.skin));
+  head.position.y=0.80*H; inner.add(head); g.head=head;
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(0.315*H,24,18),mat(P.hair));
+  hair.scale.set(1,0.72,1); hair.position.set(0,0.90*H,-0.045*H); inner.add(hair);
+  for(const sx of [-1,1]){
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(0.035*H,10,8),mat(0x2b1c10));
+    eye.position.set(sx*0.11*H,0.82*H,0.265*H); inner.add(eye);
+  }
+  // arms on shoulder pivots
+  function arm(side){
+    const pivot=new THREE.Group(); pivot.position.set(side*0.32*H,0.60*H,0);
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(0.065*H,0.075*H,0.44*H,10),mat(P.body));
+    m.position.y=-0.19*H; pivot.add(m); inner.add(pivot); return pivot;
+  }
+  g.armL=arm(-1); g.armR=arm(1);
+  if(def.id==="gardener"){
+    const brim=new THREE.Mesh(new THREE.CylinderGeometry(0.37*H,0.37*H,0.045*H,24),mat(0xd9b96a));
+    brim.position.y=0.99*H; inner.add(brim);
+    const top=new THREE.Mesh(new THREE.ConeGeometry(0.21*H,0.26*H,20),mat(0xd9b96a));
+    top.position.y=1.12*H; inner.add(top);
+  } else if(def.id==="tinkerer"){
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(0.315*H,24,12),mat(0x6e4525));
+    cap.scale.set(1,0.52,1); cap.position.y=0.94*H; inner.add(cap);
+    const band=new THREE.Mesh(new THREE.TorusGeometry(0.295*H,0.05*H,10,28),mat(0x3a2c1c));
+    band.position.y=0.86*H; band.rotation.x=1.25; inner.add(band);
+    const satchel=new THREE.Mesh(new THREE.BoxGeometry(0.13*H,0.34*H,0.27*H),mat(0x5e3c1e));
+    satchel.position.set(0.40*H,0.44*H,0); satchel.rotation.z=0.10; inner.add(satchel);
+  } else if(def.id==="wanderer"){
+    const scarf=new THREE.Mesh(new THREE.TorusGeometry(0.235*H,0.078*H,12,28),mat(0xe07b39));
+    scarf.position.y=0.615*H; scarf.rotation.x=Math.PI/2; inner.add(scarf);
+    const pack=new THREE.Mesh(new THREE.BoxGeometry(0.32*H,0.40*H,0.16*H),mat(0x49586e));
+    pack.position.set(0,0.50*H,-0.33*H); inner.add(pack);
+    const staff=new THREE.Mesh(new THREE.CylinderGeometry(0.028*H,0.034*H,1.18*H,8),mat(0x7a5230));
+    staff.position.set(0.40*H,0.52*H,0.05*H); staff.rotation.z=-0.06; inner.add(staff);
+  }
+  // name label
+  const label=textSprite(def.name);
+  label.scale.multiplyScalar(0.52*H); label.position.y=1.48*H; inner.add(label);
+  // receptive halo + sleep marker
+  const halo=glowSprite(); halo.scale.set(1.7*H,1.7*H,1); halo.position.y=0.95*H; halo.visible=false; inner.add(halo); g.halo=halo;
+  const zzz=textSprite('💤',{fs:52,bg:'rgba(30,20,10,0)'});
+  zzz.scale.multiplyScalar(0.55*H); zzz.position.set(0.34*H,1.45*H,0); zzz.visible=false; inner.add(zzz); g.zzz=zzz;
+  g.phase=Math.random()*10;
+  scene.add(g.group);
+  return g;
+}
+
+/* ---------- actors: bodies driven by the sim ---------- */
+const actors={};
+const MEET_RING=[0.3,2.4,4.4];
+function soulTarget(def){
+  const c=worldClock(nowWorld());
+  const p=plan[def.id]||scheduleFor(def.id,c.mins,S.weather);
+  const a=ANCH[p.spot]||ANCH.meet;
+  let ox=0, oz=0;
+  const idx=SOUL_DEFS.indexOf(def);
+  if(p.spot==="meet"){ ox=Math.cos(MEET_RING[idx])*FIG_H*1.2; oz=Math.sin(MEET_RING[idx])*FIG_H*1.2; }
+  else { const h=Math.sin(idx*37.7+p.spot.length*13.3); ox=h*0.3*FIG_H; oz=Math.cos(idx*21.1+p.spot.length*7.7)*0.3*FIG_H; }
+  return {p, x:a.x+ox, z:a.z+oz};
+}
+function buildActors(){
+  for(const def of SOUL_DEFS){
+    const fig=makeFigure(def);
+    const t=soulTarget(def);
+    const gy=groundHeight(t.x,t.z);
+    actors[def.id]={def, fig, pos:new THREE.Vector3(t.x, gy!==null?gy+FIG_H*0.10:(ANCH.meet?ANCH.meet.y:0), t.z), yaw:0, moving:false};
+    fig.group.position.copy(actors[def.id].pos);
+  }
+}
+function lerpAngle(a,b,t){ let d=(b-a)%(Math.PI*2); if(d>Math.PI)d-=Math.PI*2; if(d<-Math.PI)d+=Math.PI*2; return a+d*t; }
+function poseActor(a,t,dt){
+  const {fig,def}=a, H=FIG_H, inner=fig.inner, ph=fig.phase;
+  const state=a.state;
+  inner.rotation.set(0,0,0); inner.position.y=0; inner.position.z=0; inner.scale.set(1,1,1);
+  fig.armL.rotation.x=0.08; fig.armR.rotation.x=0.08;
+  fig.zzz.visible=false; fig.ring.material.opacity=0;
+  const rec=(state==="sleep"||state==="meditate");
+  fig.halo.visible=rec;
+  if(rec) fig.halo.material.opacity=0.32+0.18*Math.sin(t*2+ph);
+  if(a.moving){
+    const s=Math.sin(t*7+ph);
+    inner.position.y=Math.abs(s)*0.05*H;
+    inner.rotation.z=s*0.045;
+    fig.armL.rotation.x=s*0.55;
+    fig.armR.rotation.x=(def.id==="wanderer"?-s*0.18:-s*0.55);
+  } else if(state==="sleep"){
+    inner.rotation.x=-1.22; inner.position.y=0.10*H; inner.position.z=-0.10*H;
+    inner.scale.y=1+0.02*Math.sin(t*1.2+ph);
+    fig.zzz.visible=true; fig.zzz.position.y=(1.45+0.07*Math.sin(t*0.9+ph))*H;
+  } else if(state==="meditate"){
+    inner.position.y=-0.17*H;
+    fig.armL.rotation.x=-0.55; fig.armR.rotation.x=-0.55;
+    fig.ring.material.opacity=0.35+0.2*Math.sin(t*2+ph);
+  } else if(state==="work"){
+    if(def.id==="gardener"){ inner.rotation.x=0.30+0.15*Math.sin(t*1.7+ph); }
+    else if(def.id==="tinkerer"){ inner.rotation.x=0.10; fig.armR.rotation.x=-0.75+0.55*Math.sin(t*5.0+ph); }
+    else inner.rotation.z=Math.sin(t*0.9+ph)*0.025;
+  } else if(state==="social"){
+    inner.rotation.z=Math.sin(t*0.9+ph)*0.025;
+    if(((t+ph*3)%9)<1.2) fig.armR.rotation.x=-1.9; // a gesture, now and then
+  } else {
+    inner.rotation.z=Math.sin(t*0.9+ph)*0.02;
+  }
+}
+function updateActors(t,dt){
+  for(const id in actors){
+    const a=actors[id];
+    const {p,x,z}=soulTarget(a.def);
+    a.state=p.state;
+    const dx=x-a.pos.x, dz=z-a.pos.z, dist=Math.hypot(dx,dz);
+    a.moving=dist>FIG_H*0.15;
+    let targetYaw;
+    if(a.moving){
+      const sp=PATCH_R*0.055*dt, step=Math.min(dist,sp);
+      a.pos.x+=dx/dist*step; a.pos.z+=dz/dist*step;
+      targetYaw=Math.atan2(dx,dz);
+    } else if(p.state==="social"||p.state==="work"||p.state==="visit"){
+      targetYaw=Math.atan2(CENTRE.x-a.pos.x,CENTRE.z-a.pos.z);
+    } else if(a.def.id==="wanderer"&&(p.spot==="rock"||p.spot==="path3")){
+      targetYaw=Math.atan2(a.pos.x-CENTRE.x,a.pos.z-CENTRE.z); // face the view, outward
+    } else {
+      targetYaw=Math.atan2(CENTRE.x-a.pos.x,CENTRE.z-a.pos.z);
+    }
+    a.yaw=lerpAngle(a.yaw,targetYaw,1-Math.exp(-dt*4));
+    const gy0=groundHeight(a.pos.x,a.pos.z);
+    const gy=gy0===null?null:gy0+FIG_H*0.10; // rest on the visible grass, which puffs slightly above the collider
+    if(gy!==null) a.pos.y+=(gy-a.pos.y)*(1-Math.exp(-dt*10));
+    a.fig.group.position.copy(a.pos);
+    a.fig.group.rotation.y=a.yaw;
+    poseActor(a,t,dt);
+  }
+}
+
+/* ---------- fireflies ---------- */
+let flies=null, flyBase=null, flySeed=null;
+function buildFireflies(){
+  const N=120, posArr=new Float32Array(N*3); flyBase=new Float32Array(N*3); flySeed=new Float32Array(N);
+  let placed=0, guard=0;
+  while(placed<N&&guard++<3000){
+    const ang=Math.random()*Math.PI*2, r=Math.sqrt(Math.random())*PATCH_R*0.95;
+    const x=CENTRE.x+Math.cos(ang)*r, z=CENTRE.z+Math.sin(ang)*r;
+    const gy=groundHeight(x,z); if(gy===null) continue;
+    const y=gy+0.3+Math.random()*1.6*FIG_H;
+    flyBase.set([x,y,z],placed*3); flySeed[placed]=Math.random()*20; placed++;
+  }
+  posArr.set(flyBase.subarray(0,placed*3));
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(posArr,3));
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const g2=cv.getContext('2d'); const gr=g2.createRadialGradient(32,32,2,32,32,30);
+  gr.addColorStop(0,'rgba(255,230,160,1)'); gr.addColorStop(1,'rgba(255,200,90,0)');
+  g2.fillStyle=gr; g2.fillRect(0,0,64,64);
+  flies=new THREE.Points(geo,new THREE.PointsMaterial({size:FIG_H*0.11,map:new THREE.CanvasTexture(cv),
+    transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
+  flies.count=placed;
+  scene.add(flies);
+}
+function updateFireflies(t,nf){
+  if(!flies) return;
+  flies.material.opacity=nf*0.9; flies.visible=nf>0.02;
+  if(!flies.visible) return;
+  const arr=flies.geometry.attributes.position.array;
+  for(let i=0;i<flies.count;i++){
+    const s=flySeed[i];
+    arr[i*3]  =flyBase[i*3]  +Math.sin(t*0.23+s)*0.3*FIG_H;
+    arr[i*3+1]=flyBase[i*3+1]+Math.sin(t*0.6+s*1.7)*0.18*FIG_H;
+    arr[i*3+2]=flyBase[i*3+2]+Math.cos(t*0.19+s)*0.3*FIG_H;
+  }
+  flies.geometry.attributes.position.needsUpdate=true;
+}
+
+/* ---------- day / night: an honest tint over baked light ---------- */
+const TINT_STOPS=[
+  [0,[16,22,58,0.44]],[300,[16,22,58,0.44]],[375,[120,70,60,0.20]],[450,[255,190,90,0.05]],
+  [1000,[255,190,90,0.05]],[1080,[255,130,60,0.13]],[1155,[40,30,70,0.30]],[1215,[16,22,58,0.44]],[1440,[16,22,58,0.44]]];
+function tintFor(mins){
+  for(let i=0;i<TINT_STOPS.length-1;i++){
+    const [t0,c0]=TINT_STOPS[i], [t1,c1]=TINT_STOPS[i+1];
+    if(mins>=t0&&mins<=t1){
+      const f=t1>t0?(mins-t0)/(t1-t0):0;
+      const c=c0.map((v,j)=>v+(c1[j]-v)*f);
+      return 'rgba('+Math.round(c[0])+','+Math.round(c[1])+','+Math.round(c[2])+','+c[3].toFixed(3)+')';
+    }
+  }
+  return 'rgba(16,22,58,0.44)';
+}
+function nightFactor(mins){
+  if(mins>=1215||mins<300) return 1;
+  if(mins<420) return 1-(mins-300)/120;
+  if(mins<=1065) return 0;
+  if(mins<1155) return (mins-1065)/90;
+  return 1;
+}
+
+/* ---------- camera: a box window that breathes ---------- */
+const cam={az:0.7, pol:1.08, rad:20, idle:99};
+const pointers=new Map(); let pinchD=0;
+const cvs=renderer.domElement;
+cvs.addEventListener('pointerdown',e=>{ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); cvs.setPointerCapture(e.pointerId); cam.idle=0; });
+cvs.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId)) return;
+  const prev=pointers.get(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  cam.idle=0;
+  if(pointers.size===1){
+    cam.az-=(e.clientX-prev.x)*0.005;
+    cam.pol=clamp(cam.pol-(e.clientY-prev.y)*0.004,0.55,1.42);
+  } else if(pointers.size===2){
+    const pts=[...pointers.values()];
+    const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+    if(pinchD>0) cam.rad=clamp(cam.rad*(pinchD/d),FIG_H*4,WORLD_SPAN*2.6);
+    pinchD=d;
+  }
+});
+const endPointer=e=>{ pointers.delete(e.pointerId); if(pointers.size<2) pinchD=0; };
+cvs.addEventListener('pointerup',endPointer);
+cvs.addEventListener('pointercancel',endPointer);
+cvs.addEventListener('wheel',e=>{ e.preventDefault(); cam.rad=clamp(cam.rad*Math.exp(e.deltaY*0.001),FIG_H*4,WORLD_SPAN*2.6); cam.idle=0; },{passive:false});
+function layoutCamera(){
+  const w=stageEl.clientWidth||2, h=stageEl.clientHeight||2;
+  renderer.setSize(w,h);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+addEventListener('resize',layoutCamera);
+
+/* ---------- quality toggle ---------- */
+let loadingSplat=false;
+document.querySelectorAll("#qualrow button").forEach(b=>b.addEventListener('click',async ()=>{
+  if(loadingSplat) return;
+  document.querySelectorAll("#qualrow button").forEach(x=>x.classList.toggle('sel',x===b));
+  loadingSplat=true;
+  loadingEl.querySelector('div').textContent='Growing the '+(b.dataset.q==='500k'?'richer':'lighter')+' valley…';
+  loadingEl.classList.remove('done');
+  try{ await loadSplat(b.dataset.q==='500k'?'world_500k.spz':'world_100k.spz'); }
+  catch(e){ showError('splat swap failed: '+e.message); }
+  loadingEl.classList.add('done');
+  loadingSplat=false;
+}));
+
+/* ---------- main loop ---------- */
+let lastMs=performance.now(), tintTimer=0;
+function loop(){
+  const now=performance.now();
+  const dt=Math.min(0.05,(now-lastMs)/1000); lastMs=now;
+  const t=now/1000;
+  cam.idle+=dt;
+  if(cam.idle>8) cam.az+=dt*0.006; // the window drifts, very slowly, when unwatched
+  const target=new THREE.Vector3(CENTRE.x,CENTRE.y+FIG_H*0.8,CENTRE.z);
+  camera.position.set(
+    target.x+cam.rad*Math.sin(cam.pol)*Math.sin(cam.az),
+    target.y+cam.rad*Math.cos(cam.pol),
+    target.z+cam.rad*Math.sin(cam.pol)*Math.cos(cam.az));
+  camera.lookAt(target);
+  updateActors(t,dt);
+  tintTimer+=dt;
+  if(tintTimer>0.5){
+    tintTimer=0;
+    const mins=worldClock(nowWorld()).mins;
+    tintEl.style.background=tintFor(mins);
+    updateFireflies(t,nightFactor(mins));
+    if(DEBUG) dumpDebug();
+  }
+  renderer.render(scene,camera);
+}
+
+/* ---------- boot the stage ---------- */
+window.__ground=(x,z)=>groundHeight(x,z);
+window.__actors=actors;
+window.__cam=cam;
+window.__worldGroup=worldGroup;
+window.__scene=scene;
+window.__collider=()=>colliderObj;
+(async()=>{
+  try{
+    const sem=await fetchSemantics();
+    if(sem) applySemantics(sem);
+    await Promise.all([loadCollider(),loadSplat('world_100k.spz')]);
+    worldGroup.updateMatrixWorld(true);
+    discoverAnchors();
+    buildActors();
+    buildFireflies();
+    cam.rad=clamp(WORLD_SPAN*0.62,FIG_H*6,WORLD_SPAN*2.4);
+    layoutCamera();
+    loadingEl.classList.add('done');
+    renderer.setAnimationLoop(loop);
+    if(DEBUG) dumpDebug();
+  }catch(e){
+    showError('stage failed: '+(e&&e.message||e));
+    loadingEl.querySelector('div').textContent='The valley could not grow here.';
+    loadingEl.querySelector('small').textContent=String(e&&e.message||e)+' — the inhabitants below still live; the window is the only thing missing.';
+  }
+})();
+</script>
+</body>
+</html>
