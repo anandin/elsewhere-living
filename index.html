@@ -124,8 +124,8 @@
       <div id="hint">drag to look around · scroll to come closer</div>
       <div id="caption"></div>
       <div id="qualrow">
-        <button data-q="100k" class="sel">valley · light</button>
-        <button data-q="500k">valley · rich</button>
+        <button data-q="100k">valley · light</button>
+        <button data-q="500k" class="sel">valley · rich</button>
       </div>
       <div id="speedrow">
         <button data-speed="1">real time</button>
@@ -730,20 +730,22 @@ function discoverAnchors(){
   let cx=ctr.x, cz=ctr.z;
   if(pool.length){ cx=pool.reduce((s,h)=>s+h.x,0)/pool.length; cz=pool.reduce((s,h)=>s+h.z,0)/pool.length; }
   CENTRE.set(cx,medY,cz);
-  /* Scale comes from the LIVING CORE, not the collider box. Marble worlds
-     carry a wide backdrop shell (Elveswhere-Heart: box ~37u, village island
-     ~9u); box-derived scale put the camera ~4x too far out and grew the
-     figures into giants over pebble cottages. The pool that CENTRE was
-     averaged from is the honest ruler: take its p5-p95 spread per axis. */
-  let coreSpan=Math.max(size.x,size.z);
+  /* Scale ruler = the collider box. Marble's collider covers the world's
+     living core (the wide SPZ backdrop shell is NOT in it), and box-derived
+     scale framed both the 508a380f valley and the Elveswhere-Heart island
+     correctly. A pool-spread ruler was tried on 2026-11-05 and overshot:
+     the village-top pool is ~5u while the island reads ~10u, so the camera
+     landed inside the figures' faces. coreSpan is still recorded in
+     groundStats for QA, but it does not drive scale. */
+  PATCH_R=R*0.55;
+  WORLD_SPAN=Math.max(size.x,size.z);
+  FIG_H=clamp(WORLD_SPAN*0.10,0.5,6);
+  let coreSpan=WORLD_SPAN;
   if(pool.length>=8){
     const xs=pool.map(h=>h.x).sort((a,b)=>a-b), zs=pool.map(h=>h.z).sort((a,b)=>a-b);
     const q=(arr,p)=>arr[Math.min(arr.length-1,Math.max(0,Math.floor(arr.length*p)))];
     coreSpan=Math.max(q(xs,0.95)-q(xs,0.05), q(zs,0.95)-q(zs,0.05), 2);
   }
-  PATCH_R=coreSpan*0.55;
-  WORLD_SPAN=coreSpan;
-  FIG_H=clamp(WORLD_SPAN*0.10,0.5,6);
   // Life happens in the valley bowl: the collider's outer apron slopes have ground
   // the splat does not show, so anchors stay in the core around the centre where
   // collider and visible terrain agree — figures must stand on ground you can SEE.
@@ -1300,12 +1302,12 @@ window.__collider=()=>colliderObj;
   try{
     const sem=await fetchSemantics();
     if(sem) applySemantics(sem);
-    await Promise.all([loadCollider(),loadSplat('world_100k.spz')]);
+    await Promise.all([loadCollider(),loadSplat('world_500k.spz')]); // rich splat by default: at eagle distance the 100k decimation turns cottages to mush
     worldGroup.updateMatrixWorld(true);
     discoverAnchors();
     buildActors();
     buildFireflies();
-    cam.rad=CAMQ.rad!==null?CAMQ.rad:WORLD_SPAN*1.12; // Elveswhere eagle view: the whole settlement in one frame, sized to whatever world is loaded
+    cam.rad=CAMQ.rad!==null?CAMQ.rad:WORLD_SPAN*0.95; // eagle view: the whole settlement in one frame, sized to the loaded world
     layoutCamera();
     loadingEl.classList.add('done');
     renderer.setAnimationLoop(loop);
