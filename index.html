@@ -15,7 +15,7 @@
   #app{display:flex;flex-direction:column;height:100dvh;max-width:1100px;margin:0 auto;background:#1a140e;}
 
   /* ---------- the box / stage ---------- */
-  #box{position:relative;flex:0 0 56dvh;margin:10px 10px 0;border-radius:14px;padding:10px;
+  #box{position:relative;flex:1;min-height:0;margin:10px;border-radius:14px;padding:10px;
     background:linear-gradient(145deg,#6b4a2c,#54371f 40%,#6f4e30 70%,#4a2f1a);
     box-shadow:0 10px 30px rgba(0,0,0,.55), inset 0 2px 3px rgba(255,220,170,.35), inset 0 -3px 6px rgba(0,0,0,.5);}
   #stage{position:relative;width:100%;height:100%;overflow:hidden;border-radius:6px;background:#0e1526;
@@ -143,41 +143,7 @@
     </div>
   </div>
 
-  <div id="panel">
-    <div id="tabs">
-      <button data-tab="souls" class="sel">The Inhabitants</button>
-      <button data-tab="whisper">Whisper<span id="whisperDot"></span></button>
-      <button data-tab="journal">Journal</button>
-      <button data-tab="about">About</button>
-    </div>
-
-    <div class="tabpage on" id="tab-souls"></div>
-
-    <div class="tabpage" id="tab-whisper">
-      <div id="recipStatus"></div>
-      <form id="whisperForm">
-        <label for="whisperWho">Speak to</label>
-        <select id="whisperWho"></select>
-        <label for="whisperText">Your words — they will arrive as a dream, or as a thought in stillness</label>
-        <textarea id="whisperText" maxlength="280" placeholder="Say it the way you would wish it into the world…"></textarea>
-        <div style="margin-top:10px;"><button type="submit">Send it on the wind</button></div>
-        <div id="whisperMsg"></div>
-      </form>
-      <div id="queueBox"></div>
-      <p class="smallnote">A god does not chat on demand. Your words can only land while they sleep or sit in meditation — if they are awake, the words wait, and arrive when they are ready to receive. And what the words do once they land is theirs to decide.</p>
-    </div>
-
-    <div class="tabpage" id="tab-journal">
-      <div id="journalList"></div>
-      <div class="metrics" id="metrics"></div>
-    </div>
-
-    <div class="tabpage" id="tab-about">
-      <p style="font-size:14.5px;line-height:1.6;margin-top:2px;"><b>Elveswhere — living world v1.</b> A world that carries on. Three inhabitants live in this valley whether or not anyone is watching: they work, rest, visit each other, dream, and pursue goals of their own across days. This time the valley is a real place — you are looking into it, not at a picture of it.</p>
-      <p style="font-size:14.5px;line-height:1.6;">You are not a character here. You are the presence they sense but never see — and you can only reach them when they are ready to receive: asleep, or in meditation. A golden halo around a figure in the valley means someone is receptive right now.</p>
-      <p class="smallnote">Fairy Miniature art direction, locked Nov 4, 2026. They still carry their roles as names — naming day is coming. Progress is saved on this device; the valley keeps its own time while you are gone, and catches up when you return. The valley's light is baked golden; the day-night cycle is a tint over the scene, honestly labelled.</p>
-    </div>
-  </div>
+</div>
 </div>
 
 <script>
@@ -500,77 +466,13 @@ function renderPanel(){
   $("#weather").textContent=weatherIcon(S.weather)+" "+S.weather;
   const cap=$("#caption"), b=S.flags.bubble;
   if(b&&wm<b.until){ cap.textContent=b.text; cap.classList.add("on"); } else cap.classList.remove("on");
-  renderSoulsTab(c);
-  renderJournal();
-  $("#whisperDot").innerHTML= SOUL_DEFS.some(d=>receptive(plan[d.id]||scheduleFor(d.id,c.mins,S.weather))) ? '<span class="dot"></span>' : "";
-  if($("#tab-whisper").classList.contains("on")) renderWhisperStatus();
 }
-function renderSoulsTab(c){
-  const box=$("#tab-souls");
-  box.innerHTML=SOUL_DEFS.map(def=>{
-    const s=S.souls[def.id], p=plan[def.id]||scheduleFor(def.id,c.mins,S.weather);
-    const lastMem=s.mem.length?s.mem[s.mem.length-1].text:"Nothing yet. The days are young.";
-    const pend=s.imp.filter(i=>i.fate==="pending").length;
-    return '<div class="soulcard"><img src="'+def.img+'" alt=""><div class="who">'
-      +'<h3>'+def.name+'<span class="badge'+(receptive(p)?" open":"")+'">'+(receptive(p)?"receptive now":stateLabel[p.state])+'</span></h3>'
-      +'<div class="state">'+def.role+' · '+def.traits.join(", ")+'</div>'
-      +'<div class="bar"><i style="width:'+Math.round(s.goal)+'%"></i></div>'
-      +'<div class="goalrow"><span>'+def.goalName+'</span><span>'+stageLabel(def,s.goal)+' · '+Math.round(s.goal)+'%</span></div>'
-      +'<div class="mem">Latest memory: '+esc(lastMem)+(pend?' <i>(carrying an unanswered impression)</i>':"")+'</div>'
-      +'</div></div>';
-  }).join("");
-}
-function renderJournal(){
-  const items=S.journal.slice(-30).reverse();
-  $("#journalList").innerHTML=items.map(j=>'<div class="j"><span class="t">'+stamp(j.t)+'</span><br><span class="'+(j.kind==="impression"?"imp":"")+'">'+esc(j.text)+'</span></div>').join("")||'<div class="j">Nothing yet.</div>';
-  const m=S.metrics;
-  $("#metrics").textContent="Test notes — opens: "+m.opens+" · whispers sent: "+m.whispers+" · words that landed: "+m.delivered+" · recaps seen: "+m.recaps;
-}
-function renderWhisperStatus(){
-  const wm=nowWorld(), c=worldClock(wm);
-  const lines=SOUL_DEFS.map(def=>{
-    const p=plan[def.id]||scheduleFor(def.id,c.mins,S.weather);
-    return receptive(p)
-      ? "<b>"+def.name+"</b> — "+(p.state==="sleep"?"asleep":"in meditation")+". Receptive: words sent now will land."
-      : "<b>"+def.name+"</b> — awake ("+stateLabel[p.state].toLowerCase()+"). Words sent now will wait on the wind.";
-  });
-  $("#recipStatus").innerHTML=lines.join("<br>");
-  const q=$("#queueBox");
-  q.innerHTML=S.queue.map(it=>'<div class="queueItem">🌬️ Waiting for '+byId(it.to).name+': “'+esc(it.text)+'”</div>').join("");
-}
-function switchTab(name){
-  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("sel",b.dataset.tab===name));
-  document.querySelectorAll(".tabpage").forEach(p=>p.classList.toggle("on",p.id==="tab-"+name));
-  if(name==="whisper") renderWhisperStatus();
-}
-document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
-
 function setSpeed(v){
   S.anchorWorld=nowWorld(); S.anchorReal=Date.now(); S.speed=v;
   document.querySelectorAll("#speedrow button").forEach(b=>b.classList.toggle("sel",+b.dataset.speed===v));
   save();
 }
 document.querySelectorAll("#speedrow button").forEach(b=>b.addEventListener("click",()=>setSpeed(+b.dataset.speed)));
-
-$("#whisperForm").addEventListener("submit",e=>{
-  e.preventDefault();
-  const to=$("#whisperWho").value, text=$("#whisperText").value.trim();
-  const msg=$("#whisperMsg");
-  if(!text){ msg.textContent="Say something first — even a god whispers actual words."; return; }
-  const wm=nowWorld(), c=worldClock(wm);
-  const p=scheduleFor(to,c.mins,S.weather);
-  const item={to,text,at:wm};
-  S.metrics.whispers++;
-  if(receptive(p)){
-    deliver(to,item,wm,true);
-    msg.textContent="It lands now. Watch — and check the Journal for what it becomes by morning.";
-  } else {
-    S.queue.push(item);
-    msg.textContent=byId(to).name+" is awake. Your words are on the wind — they will land at the next sleep or meditation.";
-  }
-  $("#whisperText").value="";
-  renderWhisperStatus(); renderPanel(); save();
-});
 
 function maybeRecap(had){
   const since=(S.lastSeenWorld===undefined? -1 : S.lastSeenWorld);
@@ -596,12 +498,9 @@ function bootSim(){
   S.metrics.opens++;
   if(!had){
     const wm=S.anchorWorld;
-    journal(wm,"The valley wakes for the first time: three inhabitants, one river, and all the days ahead.","event",2);
+    journal(wm,"The valley wakes for the first time: six inhabitants, one river, and all the days ahead.","event",2);
     for(const def of SOUL_DEFS) remember(def.id,wm,"The first morning. Everything is possible and nothing is finished.");
   }
-  const sel=$("#whisperWho");
-  sel.innerHTML=SOUL_DEFS.map(d=>'<option value="'+d.id+'">'+d.name+'</option>').join("");
-  sel.addEventListener("change",renderWhisperStatus);
   document.querySelectorAll("#speedrow button").forEach(b=>b.classList.toggle("sel",+b.dataset.speed===S.speed));
   lastWm=S.anchorWorld;
   let target=nowWorld();
@@ -609,7 +508,7 @@ function bootSim(){
   advanceTo(target);
   S.anchorWorld=target; S.anchorReal=Date.now();
   for(const def of SOUL_DEFS) plan[def.id]=scheduleFor(def.id,worldClock(target).mins,S.weather);
-  renderPanel(); renderWhisperStatus();
+  renderPanel();
   maybeRecap(had);
   save();
   let tick=0;
@@ -705,15 +604,46 @@ function applySemantics(sem){
   // scaling the world by msf put the collider 11 units below the visible splat.
   window.__semantics={msf:sem.metric_scale_factor||1, gpo:sem.ground_plane_offset||0};
 }
+/* Whole-file fetch with a pieces fallback: on git deploys every asset is a
+   plain file; on direct deploys the big binaries travel as name.p00, p01...
+   chunks (the deploy pipe caps file size) and are reassembled here. */
+async function fetchWhole(name){
+  try{ const r=await fetch(name); if(r.ok) return await r.arrayBuffer(); }catch(e){}
+  const first=[];
+  for(let i=0;i<400;i++){
+    const r=await fetch(name+'.p'+String(i).padStart(2,'0'));
+    if(!r.ok) break;
+    first.push(await r.arrayBuffer());
+    if(i>=7) break; // probe batch only — full fetch below if parts exist
+  }
+  if(!first.length) throw new Error('asset not found: '+name);
+  // fetch the rest in parallel batches (sequential parts made big assets
+  // arrive far too late — the castle missed its own screenshots)
+  const parts=[...first];
+  for(let base=8;base<400;base+=12){
+    const batch=[];
+    for(let i=base;i<Math.min(base+12,400);i++){
+      batch.push(fetch(name+'.p'+String(i).padStart(2,'0')).then(async r=>r.ok?await r.arrayBuffer():null).catch(()=>null));
+    }
+    const got=await Promise.all(batch);
+    let stop=false;
+    for(const g of got){ if(g===null){ stop=true; break; } parts.push(g); }
+    if(stop||got.length<12) break;
+  }
+  const buf=new Uint8Array(parts.reduce((s,p)=>s+p.byteLength,0));
+  let off=0; for(const p of parts){ buf.set(new Uint8Array(p),off); off+=p.byteLength; }
+  return buf.buffer;
+}
 async function loadSplat(url){
   if(splat){ worldGroup.remove(splat); if(splat.dispose) splat.dispose(); }
-  splat=new SplatMesh({url});
+  const buf=await fetchWhole(url);
+  splat=new SplatMesh({url:URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'}))});
   if(FLIP_WORLD) splat.quaternion.set(1,0,0,0); // SPZ is Y-down vs three.js Y-up (Spark docs pattern)
   worldGroup.add(splat);
   await splat.initialized;
 }
 async function loadCollider(){
-  const gltf=await new GLTFLoader().loadAsync('world_collider.glb');
+  const gltf=await new GLTFLoader().parseAsync(await fetchWhole('world_collider.glb'),'');
   colliderObj=gltf.scene;
   // The GLB is exported in the same Y-down frame as the SPZ: it needs the same
   // PI-about-X flip as the splat, or its heightfield is upside-down (its flat
@@ -1165,6 +1095,92 @@ function declutterLabels(dt){
 
 /* ---------- fireflies ---------- */
 let flies=null, flyBase=null, flySeed=null;
+/* ---------- the built town: real geometry standing on the splat land ----------
+   The splat only PAINTS its castle and cottages. These are built: a real
+   castle mesh on the high ground, cottages at the homes, puffball trees,
+   and the meeting stone itself. Everything grounds through the collider. */
+function townGroundY(x,z){ const y=groundHeight(x,z); return y===null?CENTRE.y:y; }
+function makeCottage(wallC, roofC){
+  const H=FIG_H, g=new THREE.Group();
+  const walls=new THREE.Mesh(new THREE.BoxGeometry(1.15*H,0.72*H,0.95*H), mat(wallC)); walls.position.y=0.36*H; g.add(walls);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(0.99*H,0.55*H,4), mat(roofC)); roof.position.y=0.99*H; roof.rotation.y=Math.PI/4; roof.scale.set(1,1,0.84); g.add(roof);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(0.20*H,0.36*H,0.04*H), mat(0x5e3c1e)); door.position.set(0,0.18*H,0.48*H); g.add(door);
+  for(const sx of [-0.32,0.32]){
+    const win=new THREE.Mesh(new THREE.BoxGeometry(0.16*H,0.16*H,0.04*H),
+      new THREE.MeshStandardMaterial({color:0xffc46b, emissive:0xff9d3c, emissiveIntensity:0.85, roughness:0.6}));
+    win.position.set(sx*H,0.42*H,0.48*H); g.add(win);
+  }
+  const chim=new THREE.Mesh(new THREE.BoxGeometry(0.14*H,0.34*H,0.14*H), mat(0x8a7f74)); chim.position.set(0.34*H,1.06*H,-0.10*H); g.add(chim);
+  return g;
+}
+function makePuffTree(s){
+  const H=FIG_H, g=new THREE.Group();
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.05*H,0.08*H,0.55*H,8), mat(0x6e4525)); trunk.position.y=0.27*H; g.add(trunk);
+  const c1=new THREE.Mesh(new THREE.SphereGeometry(0.42*H*s,14,12), mat(0x5d8a43)); c1.position.y=(0.62+0.23*s)*H; g.add(c1);
+  const c2=new THREE.Mesh(new THREE.SphereGeometry(0.30*H*s,12,10), mat(0x6f9a4e)); c2.position.set(0.26*H,0.66*H,0.08*H); g.add(c2);
+  return g;
+}
+function buildTown(){
+  const H=FIG_H, town=new THREE.Group(); scene.add(town); window.__town=town;
+  // the meeting stone at the centre of village life
+  const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(0.34*H,0), mat(0x9a938a));
+  stone.scale.y=0.55; stone.position.set(CENTRE.x, CENTRE.y+0.08*H, CENTRE.z); town.add(stone);
+  // cottages at the homes, doors facing the meeting stone
+  const homes=[["cottageA",0xe8dcc0,0xa8563c],["cottageB",0xdfc9a8,0x7a9a52],["cottageC",0xe8dcc0,0x5d7a9a],["cottageD",0xead9bd,0xb5502e],["cottageE",0xdfc9a8,0x8a5a34]];
+  for(const [key,wallC,roofC] of homes){
+    const a=ANCH[key]; if(!a) continue;
+    const cot=makeCottage(wallC,roofC);
+    cot.position.set(a.x, townGroundY(a.x,a.z)+H*0.02, a.z);
+    cot.lookAt(CENTRE.x, cot.position.y, CENTRE.z);
+    town.add(cot);
+  }
+  // puffball trees scattered on the playable ground, clear of the named places
+  const taken=Object.values(ANCH);
+  let planted=0;
+  for(let i=0;i<40&&planted<12;i++){
+    const ang=i*2.39996, rr=PATCH_R*(0.22+0.62*((i*0.37)%1));
+    const x=CENTRE.x+Math.cos(ang)*rr, z=CENTRE.z+Math.sin(ang)*rr;
+    const y=groundHeight(x,z); if(y===null) continue;
+    if(Math.abs(y-CENTRE.y)>H*1.4) continue;
+    if(taken.some(a=>Math.hypot(a.x-x,a.z-z)<H*2.3)) continue;
+    const t=makePuffTree(0.8+((i*0.53)%1)*0.6);
+    t.position.set(x,y,z); t.rotation.y=i*1.7; town.add(t); planted++;
+  }
+  // the castle: real mesh on the high ground. Scan rings inward from the
+  // rim and keep only ground near village height (the rim ring alone lands
+  // on the outer apron of surround worlds — painted water, not land).
+  let spot=null, best=-1e9;
+  for(const rrF of [0.72,0.58,0.45,0.34]){
+    for(let i=0;i<28;i++){
+      const ang=(i/28)*Math.PI*2, rr=PATCH_R*rrF;
+      const x=CENTRE.x+Math.cos(ang)*rr, z=CENTRE.z+Math.sin(ang)*rr;
+      const y=groundHeight(x,z); if(y===null) continue;
+      if(y<CENTRE.y-H*0.8||y>CENTRE.y+H*2.6) continue;
+      const y2=groundHeight(x+H*0.8,z), y3=groundHeight(x,z+H*0.8);
+      if(y2===null||y3===null) continue;
+      const slope=Math.abs(y2-y)+Math.abs(y3-y);
+      const score=y-slope*1.5;
+      if(score>best){ best=score; spot={x,z,y}; }
+    }
+    if(spot) break;
+  }
+  window.__castleSpot=spot;
+  if(spot){
+    fetchWhole('castle.glb').then(buf=>new GLTFLoader().parseAsync(buf,'')).then(gltf=>{
+      const obj=gltf.scene;
+      const bb=new THREE.Box3().setFromObject(obj);
+      const size=bb.getSize(new THREE.Vector3());
+      obj.scale.setScalar((FIG_H*4.6)/Math.max(size.y,0.001));
+      const wrap=new THREE.Group(); wrap.add(obj);
+      const bb2=new THREE.Box3().setFromObject(wrap);
+      const c2=bb2.getCenter(new THREE.Vector3());
+      obj.position.x-=c2.x; obj.position.z-=c2.z; obj.position.y-=bb2.min.y;
+      wrap.position.set(spot.x, spot.y-0.05*FIG_H, spot.z);
+      wrap.lookAt(CENTRE.x, spot.y-0.05*FIG_H, CENTRE.z);
+      town.add(wrap); window.__castle=wrap;
+    }).catch(e=>{ window.__errors=window.__errors||[]; window.__errors.push('castle load: '+(e&&e.message||e)); });
+  }
+}
 function buildFireflies(){
   const N=120, posArr=new Float32Array(N*3); flyBase=new Float32Array(N*3); flySeed=new Float32Array(N);
   let placed=0, guard=0;
@@ -1386,6 +1402,7 @@ window.__collider=()=>colliderObj;
     worldGroup.updateMatrixWorld(true);
     discoverAnchors();
     buildActors();
+    buildTown();
     buildFireflies();
     cam.rad=CAMQ.rad!==null?CAMQ.rad:WORLD_SPAN*0.95; // eagle view: the whole settlement in one frame, sized to the loaded world
     layoutCamera();
