@@ -1429,6 +1429,31 @@ function makeNoiseTexture(){
   tx.wrapS=tx.wrapT=THREE.RepeatWrapping;
   return tx;
 }
+function makeMeadowTexture(){
+  // a painterly stroke field: thousands of tiny brush dabs in the picture's
+  // greens over a near-white base, so it MULTIPLIES the vertex colour and
+  // breaks the flat low-poly read that Anand called "meshed up"
+  const S=512, cv=document.createElement('canvas'); cv.width=cv.height=S;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#f4f1e6'; ctx.fillRect(0,0,S,S);
+  const greens=['#5d8a3c','#6f9a44','#87b155','#a4c46a','#4e7d34','#7fae4c'];
+  for(let i=0;i<5200;i++){
+    ctx.strokeStyle=greens[(Math.random()*greens.length)|0];
+    ctx.globalAlpha=0.05+Math.random()*0.09;
+    ctx.lineWidth=1+Math.random()*2;
+    const x=Math.random()*S, y=Math.random()*S, a=Math.random()*Math.PI, l=4+Math.random()*9;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(a)*l, y+Math.sin(a)*l); ctx.stroke();
+  }
+  for(let i=0;i<900;i++){
+    ctx.fillStyle='#d9c98a'; ctx.globalAlpha=0.05+Math.random()*0.08;
+    ctx.fillRect(Math.random()*S, Math.random()*S, 2.5, 2.5);
+  }
+  ctx.globalAlpha=1;
+  const tx=new THREE.CanvasTexture(cv);
+  tx.wrapS=tx.wrapT=THREE.RepeatWrapping;
+  tx.anisotropy=4;
+  return tx;
+}
 function makeWaterMat(noiseTx, flow){
   return new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, side:THREE.DoubleSide,
@@ -1459,6 +1484,31 @@ function makeWaterMat(noiseTx, flow){
 function buildLivingWorld(){
   const H=FIG_H, E=PATCH_R*1.14;
   const group=new THREE.Group(); scene.add(group); window.__living=group;
+  /* ---- ONE STYLE (Nov 6): the photograph retires completely. The island
+     is real geometry in the approved picture's language only — emerald
+     meadow, honey light, cream stone — bound by one sky, one sea, one fog. */
+  worldGroup.visible=false;
+  const noiseTx=makeNoiseTexture();
+  const waterMats=[];
+  // sky dome: a painted gradient, dimmed by night in animateLiving
+  const skyCv=document.createElement('canvas'); skyCv.width=16; skyCv.height=256;
+  const sg=skyCv.getContext('2d'), grad=sg.createLinearGradient(0,0,0,256);
+  grad.addColorStop(0,'#6ea3d4'); grad.addColorStop(0.45,'#a8c8e2');
+  grad.addColorStop(0.75,'#dcebf0'); grad.addColorStop(1,'#f6e0b4');
+  sg.fillStyle=grad; sg.fillRect(0,0,16,256);
+  const domeMat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(skyCv),
+    side:THREE.BackSide, fog:false, depthWrite:false});
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(430,24,14), domeMat);
+  dome.position.set(CENTRE.x, CENTRE.y, CENTRE.z);
+  dome.renderOrder=-10;
+  group.add(dome);
+  scene.fog=new THREE.Fog(0xf2dfba, PATCH_R*2.4, PATCH_R*7.5);
+  // the sea the island floats on
+  const seaY=CENTRE.y-H*1.55;
+  const seaMat=makeWaterMat(noiseTx,0.35); waterMats.push(seaMat);
+  const sea=new THREE.Mesh(new THREE.CircleGeometry(PATCH_R*6,56), seaMat);
+  sea.rotation.x=-Math.PI/2; sea.position.set(CENTRE.x, seaY, CENTRE.z);
+  group.add(sea);
   /* ---- the river's path: castle hill -> village -> rim ---- */
   const cs=window.__castleSpot;
   const hill=cs? new THREE.Vector2(cs.x,cs.z) : new THREE.Vector2(CENTRE.x-PATCH_R*0.5, CENTRE.z-PATCH_R*0.5);
@@ -1526,19 +1576,20 @@ function buildLivingWorld(){
       y-=RD*k*cFade;
     }
     const rr=Math.hypot(x-CENTRE.x,z-CENTRE.z);
-    y-=sstep(PATCH_R*1.02,PATCH_R*1.14,rr)*H*2.4;
+    y-=sstep(PATCH_R*0.98,PATCH_R*1.13,rr)*H*3.6; // dive deep below the sea — no shelf ghosts
     return y;
   };
   window.__terrainH=terrainH;
   /* ---- terrain mesh with painted vertex colours ---- */
   const FN=120, nv=(FN+1)*(FN+1);
-  const pos=new Float32Array(nv*3), col=new Float32Array(nv*3), idx=[];
-  const cA=new THREE.Color(0x74984a), cB=new THREE.Color(0xa9bf62), cRock=new THREE.Color(0x8a7f6d),
-        cBank=new THREE.Color(0xc9b183), cBed=new THREE.Color(0x5f7040), cStone=new THREE.Color(0x9b8f7a), tmpC=new THREE.Color();
+  const pos=new Float32Array(nv*3), col=new Float32Array(nv*3), tuv=new Float32Array(nv*2), idx=[];
+  const cA=new THREE.Color(0x4e7d34), cB=new THREE.Color(0x8ab85e), cRock=new THREE.Color(0x8a7f6d),
+        cBank=new THREE.Color(0xc9b183), cBed=new THREE.Color(0x55703c), cStone=new THREE.Color(0x9b8f7a), tmpC=new THREE.Color();
   for(let j=0;j<=FN;j++) for(let i=0;i<=FN;i++){
     const x=CENTRE.x-E+2*E*i/FN, z=CENTRE.z-E+2*E*j/FN, vi=j*(FN+1)+i;
     const y=terrainH(x,z)+0.035*H;
     pos.set([x,y,z],vi*3);
+    tuv.set([i/FN*22, j/FN*22],vi*2);
     const n1=smoothN(x*0.55,z*0.55);
     tmpC.copy(cA).lerp(cB,n1);
     const sl=Math.abs(terrainH(x+0.3,z)-y)+Math.abs(terrainH(x,z+0.3)-y);
@@ -1553,11 +1604,10 @@ function buildLivingWorld(){
   const tg=new THREE.BufferGeometry();
   tg.setAttribute('position',new THREE.BufferAttribute(pos,3));
   tg.setAttribute('color',new THREE.BufferAttribute(col,3));
+  tg.setAttribute('uv',new THREE.BufferAttribute(tuv,2));
   tg.setIndex(idx); tg.computeVertexNormals();
-  group.add(new THREE.Mesh(tg,new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.96,metalness:0})));
+  group.add(new THREE.Mesh(tg,new THREE.MeshStandardMaterial({vertexColors:true,map:makeMeadowTexture(),roughness:0.96,metalness:0})));
   /* ---- the water: a ribbon in the carved channel ---- */
-  const noiseTx=makeNoiseTexture();
-  const waterMats=[];
   const WN=64, wpos=[], wuv=[], widx=[];
   let vAcc=0; let prev=null;
   const wY=[];
@@ -1665,6 +1715,28 @@ function buildLivingWorld(){
     grass.count=placedG;
   }
   group.add(grass);
+  /* ---- flower specks, straight from the picture ---- */
+  {
+    const fGeo=new THREE.SphereGeometry(H*0.05,6,5);
+    const fMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.8});
+    const FN2=380, flowers=new THREE.InstancedMesh(fGeo,fMat,FN2);
+    const m4=new THREE.Matrix4(), fc=new THREE.Quaternion(), fe=new THREE.Euler(), fsc=new THREE.Vector3(1,0.75,1), fpv=new THREE.Vector3();
+    const palette=[0xf6e3a1,0xef9a7a,0xc9a7eb,0xffffff,0xf2b8c6].map(c=>new THREE.Color(c));
+    let placedF=0, guardF=0;
+    while(placedF<FN2&&guardF++<20000){
+      const ang=Math.random()*Math.PI*2, r=Math.sqrt(Math.random())*PATCH_R*0.95;
+      const x=CENTRE.x+Math.cos(ang)*r, z=CENTRE.z+Math.sin(ang)*r;
+      if(distRiver(x,z)<RW*1.25) continue;
+      fpv.set(x, terrainH(x,z)+H*0.10, z);
+      fe.set(0,Math.random()*Math.PI,0); fc.setFromEuler(fe);
+      const s=0.8+Math.random()*0.9; fsc.set(s,s*0.75,s);
+      m4.compose(fpv,fc,fsc); flowers.setMatrixAt(placedF,m4);
+      flowers.setColorAt(placedF, palette[(Math.random()*palette.length)|0]);
+      placedF++;
+    }
+    flowers.count=placedF;
+    group.add(flowers);
+  }
   /* ---- the town trees, breathing ---- */
   const trees=[];
   if(window.__town){
@@ -1705,7 +1777,7 @@ function buildLivingWorld(){
     sp.scale.set(H*(7+Math.random()*5), H*(2.4+Math.random()*1.4), 1);
     group.add(sp); clouds.push(sp);
   }
-  living={ waterMats, grassShaderRef:()=>grassShader, trees, motes, mPos, mSeed, clouds, mist, group };
+  living={ waterMats, grassShaderRef:()=>grassShader, trees, motes, mPos, mSeed, clouds, mist, group, domeMat };
 }
 function animateLiving(t, dt){
   if(!living) return;
@@ -1718,6 +1790,8 @@ function animateLiving(t, dt){
     tr.g.rotation.x=Math.cos(t*1.05+tr.ph)*0.02;
   }
   const nf=nightFactor(worldClock(nowWorld()).mins);
+  if(living.domeMat) living.domeMat.color.setRGB(1-nf*0.72, 1-nf*0.66, 1-nf*0.42);
+  if(scene.fog&&scene.background) scene.fog.color.copy(scene.background);
   const pos=living.motes.geometry.attributes.position;
   for(let i=0;i<living.mSeed.length;i++){
     let x=pos.getX(i), y=pos.getY(i), z=pos.getZ(i);
@@ -1770,11 +1844,9 @@ window.__collider=()=>colliderObj;
     buildActors();
     buildTown();
     buildFireflies();
-    // buildLivingWorld() PARKED Nov 6: Anand's verdict on the transform was
-    // "poor, meshed up graphics" — flat geometry laid over a painterly
-    // photograph is two art languages fighting. The living systems stay in
-    // the file for the one-style rebuild; the shipped world is the coherent
-    // pre-transform build until that lands.
+    buildLivingWorld(); // ONE-STYLE rebuild (Nov 6, Anand's go): the splat
+    // hides inside this call and the island stands as real geometry in the
+    // approved picture's single style — terrain, river, sea, sky, wind.
     cam.rad=CAMQ.rad!==null?CAMQ.rad:WORLD_SPAN*0.95; // eagle view: the whole settlement in one frame, sized to the loaded world
     layoutCamera();
     loadingEl.classList.add('done');
