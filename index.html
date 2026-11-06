@@ -1770,7 +1770,11 @@ window.__collider=()=>colliderObj;
     buildActors();
     buildTown();
     buildFireflies();
-    buildLivingWorld();
+    // buildLivingWorld() PARKED Nov 6: Anand's verdict on the transform was
+    // "poor, meshed up graphics" — flat geometry laid over a painterly
+    // photograph is two art languages fighting. The living systems stay in
+    // the file for the one-style rebuild; the shipped world is the coherent
+    // pre-transform build until that lands.
     cam.rad=CAMQ.rad!==null?CAMQ.rad:WORLD_SPAN*0.95; // eagle view: the whole settlement in one frame, sized to the loaded world
     layoutCamera();
     loadingEl.classList.add('done');
